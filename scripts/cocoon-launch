@@ -273,7 +273,7 @@ def load_config_from_file(cli_args) -> Config:
         return val.lower() in ('true', 'yes', '1', 'on')
 
     script_dir = Path(__file__).parent.parent
-    build_dir = get('build_dir') or os.environ.get('BUILD_DIR') or str(script_dir / 'cmake-build-default-tdx')
+    build_dir = get('build_dir') or os.environ.get('BUILD_DIR') or str(script_dir / 'cmake-build-default-tee')
     prepared_spec_dir = str(Path(tempfile.mkdtemp(prefix='cocoon-spec-')) / 'spec')
 
     if cli_args.local_all:
@@ -902,7 +902,7 @@ def parse_args():
     parser.add_argument('--tcp', action='append', type=int, default=[])
     parser.add_argument('--no-tee', action='store_true')
     parser.add_argument('--image-dir', help='Image directory')
-    parser.add_argument('--build-dir', help='Build directory (defaults to BUILD_DIR env or cmake-build-default-tdx)')
+    parser.add_argument('--build-dir', help='Build directory (defaults to BUILD_DIR env or cmake-build-default-tee)')
 
     # Extra
     parser.add_argument('--set', action='append', default=[], help='Extra runtime vars (K=V)')
