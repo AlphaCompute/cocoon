@@ -44,6 +44,12 @@ td::Result<PolicyConfig> parse_policy_from_json(td::JsonObject &obj) {
     policy.tdx_config = std::move(tdx_config);
   }
 
+  auto r_sev_config_field = obj.extract_optional_field("sev_config", td::JsonValue::Type::Object);
+  if (r_sev_config_field.is_ok() && r_sev_config_field.ok().type() == td::JsonValue::Type::Object) {
+    TRY_RESULT(sev_config, sev::parse_policy_config(r_sev_config_field.ok_ref().get_object()));
+    policy.sev_config = std::move(sev_config);
+  }
+
   return policy;
 }
 

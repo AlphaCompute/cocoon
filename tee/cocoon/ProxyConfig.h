@@ -20,6 +20,7 @@ struct PolicyConfig {
 
   // TDX policy configuration (includes image hash, allowed measurements, etc.)
   tdx::PolicyConfig tdx_config;
+  sev::PolicyConfig sev_config;
 
   // Legacy parameters for backward compatibility
   std::map<std::string, std::string> parameters;  // Additional policy-specific parameters
