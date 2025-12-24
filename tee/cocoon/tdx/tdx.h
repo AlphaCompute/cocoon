@@ -1,9 +1,10 @@
 #pragma once
 #include "td/net/SslCtx.h"
-#include "td/utils/crypto.h"
-#include "td/utils/format.h"
+#include "td/utils/JsonBuilder.h"
 #include "td/utils/UInt.h"
 #include "td/utils/Variant.h"
+#include "td/utils/crypto.h"
+#include "td/utils/format.h"
 #include "td/e2e/Keys.h"
 #include <functional>
 #include <memory>
@@ -360,6 +361,7 @@ struct PolicyConfig {
   std::vector<td::UInt384> allowed_collateral_root_hashes;  ///< Allowed Intel root key IDs (empty = any)
 };
 
+td::Result<PolicyConfig> parse_policy_config(td::JsonObject &obj);
 td::StringBuilder &operator<<(td::StringBuilder &sb, const PolicyConfig &config);
 
 /**
