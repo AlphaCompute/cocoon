@@ -1,7 +1,7 @@
 #pragma once
 #include "td/utils/Status.h"
 #include "td/utils/UInt.h"
-#include "tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include <memory>
 #include <optional>
 

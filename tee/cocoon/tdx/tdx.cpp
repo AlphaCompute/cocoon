@@ -1,7 +1,7 @@
 // Minimal TDX/SGX helpers and SSL context
 
 #include "cocoon/openssl_utils.h"
-#include "cocoon/tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include "cocoon/utils.h"
 #include "cocoon/AttestationCache.h"
 #include "td/utils/misc.h"

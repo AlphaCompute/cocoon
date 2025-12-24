@@ -1,5 +1,6 @@
 #pragma once
-#include "cocoon/tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
+#include "tee/cocoon/sev/PolicyConfig.h"
 #include "td/utils/JsonBuilder.h"
 #include "td/utils/Status.h"
 #include <map>

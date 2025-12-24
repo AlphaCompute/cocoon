@@ -4,7 +4,7 @@
 #include "td/utils/BufferedFd.h"
 #include "td/utils/optional.h"
 #include "td/utils/format.h"
-#include "tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include "utils.h"
 #include "td/net/Pipe.h"
 #include "td/net/utils.h"

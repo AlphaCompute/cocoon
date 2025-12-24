@@ -21,16 +21,16 @@ mkdir $SRCDIR/cocoon/build-reprodebian || true
 # Install binaries to guest image
 mkdir -p "$DESTDIR/usr/bin"
 
-for binary in tee/sgx-enclave/seal-client tee/sgx-enclave/seal-server tee/gen-cert tee/router worker-runner client-runner proxy-runner key-manager-runner sync-time tee/cocoon-subst tee/health-monitor tee/health-client tee/sev-info; do
+for binary in tee/cocoon/tdx/sgx-enclave/seal-client tee/cocoon/tdx/sgx-enclave/seal-server tee/gen-cert tee/router worker-runner client-runner proxy-runner key-manager-runner sync-time tee/cocoon-subst tee/health-monitor tee/health-client tee/sev-info; do
   cp "$SRCDIR/cocoon/build-reprodebian/$binary" "$DESTDIR/usr/bin/"
 done
 
 # Install enclave.signed.so
-cp "$SRCDIR/cocoon/build-reprodebian/tee/sgx-enclave/enclave.signed.so" "$DESTDIR/usr/bin/"
+cp "$SRCDIR/cocoon/build-reprodebian/tee/cocoon/tdx/sgx-enclave/enclave.signed.so" "$DESTDIR/usr/bin/"
 
 # Install MR_ENCLAVE
 mkdir -p "$DESTDIR/usr/share/cocoon"
-cp "$SRCDIR/cocoon/build-reprodebian/tee/sgx-enclave/mr_enclave.txt" "$DESTDIR/usr/share/cocoon/"
+cp "$SRCDIR/cocoon/build-reprodebian/tee/cocoon/tdx/sgx-enclave/mr_enclave.txt" "$DESTDIR/usr/share/cocoon/"
 
 for binary in cocoon-init{,-tdx,-sev,-common} cocoon-prepare-spec cocoon-render-config cocoon-render-ton-config cocoon-sync-time gen-cert-synced; do
   cp "$SRCDIR/cocoon-init/$binary" "$DESTDIR/usr/bin/$binary"

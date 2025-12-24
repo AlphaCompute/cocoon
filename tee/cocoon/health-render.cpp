@@ -5,13 +5,13 @@
  */
 
 #include "health-render.h"
-#include "tdx-eventlog.h"
 #include "td/utils/logging.h"
 #include "td/utils/algorithm.h"
 #include "td/utils/misc.h"
 #include "td/utils/UInt.h"
 #include "td/utils/base64.h"
-#include "cocoon/tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
+#include "tee/cocoon/tdx/eventlog.h"
 #include "git.h"
 #include <sstream>
 #include <iomanip>

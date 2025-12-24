@@ -14,8 +14,6 @@ set(COCOON_SOURCE
         cocoon/AttestationCache.h
         cocoon/CertManager.cpp
         cocoon/CertManager.h
-        cocoon/tdx.cpp
-        cocoon/tdx.h
         cocoon/FwdProxy.cpp
         cocoon/FwdProxy.h
         cocoon/RevProxy.cpp
@@ -26,6 +24,8 @@ set(COCOON_SOURCE
         cocoon/utils.h
         cocoon/ProxyConfig.cpp
         cocoon/ProxyConfig.h
+        cocoon/tdx/tdx.cpp
+        cocoon/tdx/tdx.h
         cocoon/sev/ABI.cpp
         cocoon/sev/ABI.h
         cocoon/sev/GuestCTX.cpp
@@ -129,7 +129,7 @@ add_executable(health-monitor EXCLUDE_FROM_ALL
   ${CMAKE_CURRENT_SOURCE_DIR}/cocoon/health-metrics.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cocoon/health-stats.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/cocoon/health-render.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/cocoon/tdx-eventlog.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/cocoon/tdx/eventlog.cpp
 )
 target_link_libraries(health-monitor PRIVATE cocoon tdutils tdnet_ported tdactor git)
 
@@ -137,4 +137,4 @@ add_executable(health-client EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/cocoon
 target_link_libraries(health-client PRIVATE cocoon tdutils tdnet_ported tdactor)
 
 # SGX enclave build (self-contained, returns early if SDK not found)
-add_subdirectory(sgx-enclave)
+add_subdirectory(cocoon/tdx/sgx-enclave)

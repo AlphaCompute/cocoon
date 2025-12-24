@@ -179,7 +179,7 @@ struct AttestationData {
   td::UInt384 collateral_root_hash() const {
     return collateral_root_hash_;
   }
-  
+
   /**
    * @brief Get a short description of the attestation type
    * @return String describing the type: "TDX", "fake TDX", "SGX", or "None"

@@ -2,7 +2,7 @@
 #include "td/net/TcpListener.h"
 #include "td/utils/port/IPAddress.h"
 #include "td/utils/SharedValue.h"
-#include "tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include "td/actor/coro_task.h"
 #include "td/net/Pipe.h"
 

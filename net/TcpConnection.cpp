@@ -20,7 +20,7 @@
 #include "TcpConnection.hpp"
 #include "auto/tl/cocoon_api.h"
 #include "auto/tl/cocoon_api.hpp"
-#include "cocoon/tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include "td/net/Pipe.h"
 #include "td/utils/Status.h"
 #include "td/utils/buffer.h"

@@ -20,7 +20,7 @@
 
 #include "TcpConnection.hpp"
 #include "TcpClient.h"
-#include "cocoon/tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include "common/bitstring.h"
 #include "td/actor/ActorId.h"
 #include "td/actor/ActorOwn.h"

@@ -1,7 +1,7 @@
 #pragma once
 #include "td/net/TcpListener.h"
 #include "td/utils/SharedValue.h"
-#include "tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include <map>
 
 namespace cocoon {

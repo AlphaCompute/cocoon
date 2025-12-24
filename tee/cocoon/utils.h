@@ -1,5 +1,5 @@
 #pragma once
-#include "tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include "td/actor/actor.h"
 #include "td/utils/as.h"
 #include "td/utils/buffer.h"

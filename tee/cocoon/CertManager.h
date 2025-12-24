@@ -2,7 +2,7 @@
 #include "td/actor/actor.h"
 #include "td/utils/SharedValue.h"
 #include "td/utils/Time.h"
-#include "tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 
 namespace cocoon {
 

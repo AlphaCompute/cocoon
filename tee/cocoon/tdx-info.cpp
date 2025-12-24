@@ -1,9 +1,9 @@
-#include "pow.h"
-#include "tdx.h"
-#include "utils.h"
 #include "td/actor/coro.h"
 #include "td/net/Pipe.h"
 #include "td/utils/OptionParser.h"
+#include "tee/cocoon/pow.h"
+#include "tee/cocoon/tdx/tdx.h"
+#include "tee/cocoon/utils.h"
 
 td::actor::Task<td::Unit> check_task(td::actor::Task<td::Unit> t) {
   auto r = (co_await std::move(t).wrap());

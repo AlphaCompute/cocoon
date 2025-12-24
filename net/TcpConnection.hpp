@@ -18,7 +18,7 @@
 */
 #pragma once
 
-#include "cocoon/tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include "common/bitstring.h"
 #include "td/actor/PromiseFuture.h"
 #include "td/actor/actor.h"

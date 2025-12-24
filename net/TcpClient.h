@@ -26,7 +26,7 @@
 #include "td/utils/port/IPAddress.h"
 #include "td/actor/actor.h"
 #include "crypto/common/bitstring.h"
-#include "tee/cocoon/tdx.h"
+#include "tee/cocoon/tdx/tdx.h"
 #include <memory>
 #include <vector>
 
