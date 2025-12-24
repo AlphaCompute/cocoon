@@ -27,6 +27,11 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const td::UInt<N> &value) {
   return sb << td::hex_encode(value.as_slice());
 }
 
+template <size_t N, class T>
+td::StringBuilder &operator<<(td::StringBuilder &sb, const std::array<T, N> &value) {
+  return sb << td::format::as_array(value);
+}
+
 }  // namespace td
 
 namespace cocoon {

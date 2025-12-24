@@ -3,7 +3,7 @@
 #include "auto/tl/tonlib_api.h"
 #include "auto/tl/tonlib_api.hpp"
 #include "block.h"
-#include "tee/cocoon/tdx/tdx.h"
+#include "tee/cocoon/tdx/PolicyConfig.h"
 #include "common/bitstring.h"
 #include "boost-http/http.h"
 #include "net/TcpClient.h"

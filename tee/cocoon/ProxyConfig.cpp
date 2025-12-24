@@ -37,17 +37,10 @@ td::Result<PolicyConfig> parse_policy_from_json(td::JsonObject &obj) {
     policy.description = r_description.move_as_ok();
   }
 
-  // Parse advanced TDX configuration if present
-  auto r_tdx_config_field = obj.extract_optional_field("tdx_config", td::JsonValue::Type::Object);
-  if (r_tdx_config_field.is_ok() && r_tdx_config_field.ok().type() == td::JsonValue::Type::Object) {
-    TRY_RESULT(tdx_config, tdx::parse_policy_config(r_tdx_config_field.ok_ref().get_object()));
-    policy.tdx_config = std::move(tdx_config);
-  }
-
-  auto r_sev_config_field = obj.extract_optional_field("sev_config", td::JsonValue::Type::Object);
-  if (r_sev_config_field.is_ok() && r_sev_config_field.ok().type() == td::JsonValue::Type::Object) {
-    TRY_RESULT(sev_config, sev::parse_policy_config(r_sev_config_field.ok_ref().get_object()));
-    policy.sev_config = std::move(sev_config);
+  auto r_ratls_policy = obj.extract_optional_field("ratls_policy", td::JsonValue::Type::Object);
+  if (r_ratls_policy.is_ok() && r_ratls_policy.ok().type() == td::JsonValue::Type::Object) {
+    TRY_RESULT(ratls_policy, parse_ratls_policy_from_json(r_ratls_policy.ok_ref().get_object()));
+    policy.ratls_policy = std::move(ratls_policy);
   }
 
   return policy;
@@ -217,27 +210,39 @@ std::string generate_example_config() {
       "name": "strict_tdx",
       "type": "tdx",
       "description": "TDX policy with advanced validation settings",
-      "tdx_config": {
-        "allowed_image_hashes": [
-          "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-          "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
-        ],
-        "allowed_collateral_root_hashes": [
-          "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
-        ],
-        "allowed_mrtd": [
-          "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-        ],
-        "allowed_rtmr": [
-          [
-            "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "ratls_policy": {
+        "tdx_config": {
+          "allowed_image_hashes": [
+            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+          ],
+          "allowed_collateral_root_hashes": [
+            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+          ],
+          "allowed_mrtd": [
             "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-          ]
-         ]
+          ],
+          "allowed_rtmr": [
+            [
+              "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+              "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+              "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+              "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+            ]
+           ]
+        },
+        "sev_config": {
+          "allowed_measurement":" [
+            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+          ],
+          "allowed_image_id": [
+            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+          ],
+        }
       }
-    }
+    },
   ],
   "ports": [
     {

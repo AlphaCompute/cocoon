@@ -74,9 +74,9 @@ std::map<std::string, tdx::PolicyRef, std::less<>> create_policies_from_config(c
     }
 
     // Create policy with full configuration
-    policies[policy_config.name] = tdx::Policy::make(tdx_interface, policy_config.tdx_config);
+    policies[policy_config.name] = tdx::Policy::make(tdx_interface, policy_config.ratls_policy.tdx_config);
     LOG(INFO) << "Created policy '" << policy_config.name << "' type=" << policy_config.type
-              << " config=" << policy_config.tdx_config;
+              << " config=" << policy_config.ratls_policy;
   }
 
   return policies;
@@ -112,7 +112,7 @@ td::Status parse_policy_spec(td::Slice spec, PolicyConfig &policy_config) {
 
   // Optional image hashes (comma-separated)
   if (parts.size() >= 3 && !parts[2].empty()) {
-    TRY_STATUS(parse_list_of_hex(parts[2], policy_config.tdx_config.allowed_image_hashes));
+    TRY_STATUS(parse_list_of_hex(parts[2], policy_config.ratls_policy.tdx_config.allowed_image_hashes));
   }
 
   return td::Status::OK();
@@ -152,7 +152,7 @@ td::Status parse_policy_and_image(td::Slice policy_spec, PortConfig &port_config
   PolicyConfig inline_policy;
   inline_policy.name = inline_policy_name;
   inline_policy.type = policy_type;
-  inline_policy.tdx_config.allowed_image_hashes = std::move(hashes);
+  inline_policy.ratls_policy.tdx_config.allowed_image_hashes = std::move(hashes);
   inline_policies.push_back(inline_policy);
 
   port_config.policy_name = inline_policy_name;
@@ -407,14 +407,11 @@ int main(int argc, char **argv) {
     config = r_config.move_as_ok();
   }
   config.policies.emplace_back(
-      PolicyConfig{.name = "tdx", .type = "tdx", .description = "default tdx", .tdx_config = {}, .parameters = {}});
+      PolicyConfig{.name = "tdx", .type = "tdx", .description = "default tdx", .ratls_policy = {}});
   config.policies.emplace_back(
-      PolicyConfig{.name = "any", .type = "any", .description = "accept any", .tdx_config = {}, .parameters = {}});
-  config.policies.emplace_back(PolicyConfig{.name = "fake_tdx",
-                                            .type = "fake_tdx",
-                                            .description = "fake tdx for testing",
-                                            .tdx_config = {},
-                                            .parameters = {}});
+      PolicyConfig{.name = "any", .type = "any", .description = "accept any", .ratls_policy = {}});
+  config.policies.emplace_back(
+      PolicyConfig{.name = "fake_tdx", .type = "fake_tdx", .description = "fake tdx for testing", .ratls_policy = {}});
 
   // Merge CLI policies with config policies
   if (!args.cli_policies.empty()) {
@@ -427,9 +424,9 @@ int main(int argc, char **argv) {
       if (policy_config.type != "tdx") {
         continue;
       }
-      policy_config.tdx_config.allowed_collateral_root_hashes.insert(
-          policy_config.tdx_config.allowed_collateral_root_hashes.end(), args.global_collateral_root_hashes.begin(),
-          args.global_collateral_root_hashes.end());
+      policy_config.ratls_policy.tdx_config.allowed_collateral_root_hashes.insert(
+          policy_config.ratls_policy.tdx_config.allowed_collateral_root_hashes.end(),
+          args.global_collateral_root_hashes.begin(), args.global_collateral_root_hashes.end());
     }
     LOG(INFO) << "Applied " << args.global_collateral_root_hashes.size()
               << " global collateral root hash(es) to all policies";

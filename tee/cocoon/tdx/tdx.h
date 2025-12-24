@@ -1,11 +1,11 @@
 #pragma once
+#include "td/e2e/Keys.h"
 #include "td/net/SslCtx.h"
-#include "td/utils/JsonBuilder.h"
 #include "td/utils/UInt.h"
 #include "td/utils/Variant.h"
 #include "td/utils/crypto.h"
 #include "td/utils/format.h"
-#include "td/e2e/Keys.h"
+#include "tee/cocoon/tdx/PolicyConfig.h"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -345,24 +345,6 @@ struct TdxInterface {
 // Forward declaration
 struct Policy;
 using PolicyRef = std::shared_ptr<const Policy>;
-
-/**
- * @brief Policy configuration for attestation validation
- */
-struct PolicyConfig {
-  // TDX measurement validation
-  std::vector<td::UInt384> allowed_mrtd;                 ///< Allowed MRTD values (empty = any)
-  std::vector<std::array<td::UInt384, 4>> allowed_rtmr;  ///< Allowed RTMR sets (empty = any)
-
-  // Image hash verification
-  std::vector<td::UInt256> allowed_image_hashes;  ///< Expected image hashes (empty = no verification)
-
-  // Collateral root hash verification (Intel DCAP root key IDs)
-  std::vector<td::UInt384> allowed_collateral_root_hashes;  ///< Allowed Intel root key IDs (empty = any)
-};
-
-td::Result<PolicyConfig> parse_policy_config(td::JsonObject &obj);
-td::StringBuilder &operator<<(td::StringBuilder &sb, const PolicyConfig &config);
 
 /**
  * @brief Policy interface for attestation validation
