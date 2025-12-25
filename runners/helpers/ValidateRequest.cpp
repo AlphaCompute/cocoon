@@ -699,7 +699,13 @@ static td::Status process_create_audio_transcription(Ctx &ctx) {
     return td::Status::OK();
   }));
   TRY_STATUS(ctx.process_obj_field("prompt", false, process_string));
-  TRY_STATUS(ctx.process_obj_field("response_format", false, process_string));
+  TRY_STATUS(ctx.process_obj_field("response_format", false, [](Ctx &ctx) {
+    TRY_RESULT(value, ctx.get_string());
+    if (value != "json") {
+      return td::Status::Error(ton::ErrorCode::error, "response_format must be 'json'");
+    }
+    return td::Status::OK();
+  }));
   TRY_STATUS(ctx.process_obj_field("stream", false, [&has_stream](Ctx &ctx) {
     TRY_RESULT_ASSIGN(has_stream, ctx.get_boolean());
     return td::Status::OK();
