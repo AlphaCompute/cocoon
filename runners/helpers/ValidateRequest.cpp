@@ -633,8 +633,10 @@ static td::Status process_chat_completions(Ctx &ctx) {
     max_completion_tokens = ctx.default_max_tokens;
   }
 
-  obj["max_tokens"] = max_completion_tokens;
-  obj["max_completion_tokens"] = max_completion_tokens;
+  if (max_completion_tokens > 0) {
+    obj["max_tokens"] = max_completion_tokens;
+    obj["max_completion_tokens"] = max_completion_tokens;
+  }
   ctx.max_tokens = max_completion_tokens;
   ctx.model = model;
 

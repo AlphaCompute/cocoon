@@ -48,7 +48,7 @@ void ClientRunningRequest::on_payload_downloaded(td::BufferSlice payload) {
   stats()->request_bytes_received += (double)payload.size();
   std::string model = "test1";
   td::int32 max_coefficient = 4000;
-  td::int32 max_tokens = 1000;
+  td::int32 max_tokens = 10000;
   //max_tokens = 0;
   //max_coefficient = 0;
   double timeout = 120.0;
@@ -69,20 +69,20 @@ void ClientRunningRequest::on_payload_downloaded(td::BufferSlice payload) {
       return td::Status::Error(ton::ErrorCode::protoviolation, "missing field 'model'");
     }
     model = b["model"].get<std::string>();
-    if (b.contains("max_tokens")) {
-      if (!b["max_tokens"].is_number_unsigned()) {
-        return td::Status::Error(ton::ErrorCode::protoviolation, "field 'max_tokens' must be positive integer");
-      }
-      max_tokens = b["max_tokens"].get<td::int32>();
-    }
     if (b.contains("max_completion_tokens")) {
       if (!b["max_completion_tokens"].is_number_unsigned()) {
         return td::Status::Error(ton::ErrorCode::protoviolation,
                                  "field 'max_completion_tokens' must be positive integer");
       }
       max_tokens = b["max_completion_tokens"].get<td::int32>();
-      b.erase("max_tokens");
+    } else if (b.contains("max_tokens")) {
+      if (!b["max_tokens"].is_number_unsigned()) {
+        return td::Status::Error(ton::ErrorCode::protoviolation, "field 'max_tokens' must be positive integer");
+      }
+      max_tokens = b["max_tokens"].get<td::int32>();
     }
+    b["max_tokens"] = max_tokens;
+    b["max_completion_tokens"] = max_tokens;
     if (b.contains("max_coefficient")) {
       if (!b["max_coefficient"].is_number_unsigned()) {
         return td::Status::Error(ton::ErrorCode::protoviolation,
