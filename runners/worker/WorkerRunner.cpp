@@ -52,29 +52,26 @@ void WorkerRunner::receive_request(WorkerProxyInfo &proxy, TcpClient::Connection
   }
   auto proto_version = conn->proto_version();
   if (active_requests_ >= max_active_requests_) {
-    td::BufferSlice res;
-    if (proto_version == 0) {
-      res = cocoon::create_serialize_tl_object<cocoon_api::proxy_queryAnswerError>(
-          ton::ErrorCode::error, "too many active queries", req.request_id_,
-          ton::create_tl_object<cocoon_api::tokensUsed>(0, 0, 0, 0, 0));
-    } else {
-      res = cocoon::create_serialize_tl_object<cocoon_api::proxy_queryAnswerErrorEx>(
-          req.request_id_, ton::ErrorCode::error, "too many active queries", 1,
-          ton::create_tl_object<cocoon_api::proxy_queryFinalInfo>(
-              (proto_version >= 2 ? 2 : 0), ton::create_tl_object<cocoon_api::tokensUsed>(0, 0, 0, 0, 0), "",
-              td::Clocks::system(), td::Clocks::system()));
-    }
+    td::BufferSlice res = cocoon::create_serialize_tl_object<cocoon_api::proxy_queryAnswerErrorEx>(
+        req.request_id_, ton::ErrorCode::error, "too many active queries", 1,
+        ton::create_tl_object<cocoon_api::proxy_queryFinalInfo>(
+            (proto_version >= 2 ? 2 : 0), ton::create_tl_object<cocoon_api::tokensUsed>(0, 0, 0, 0, 0), "",
+            td::Clocks::system(), td::Clocks::system()));
     send_message_to_connection(connection_id, std::move(res));
     return;
+  }
+
+  if (!(req.flags_ & 2)) {
+    req.private_key_ = td::Bits256::zero();
   }
 
   proxy.update_payment_info(std::move(req.signed_payment_));
   active_requests_++;
 
-  td::actor::create_actor<WorkerRunningRequest>(PSTRING() << "request_" << req.request_id_.to_hex(), req.request_id_,
-                                                connection_id, std::move(req.query_), req.timeout_, model_base_name(),
-                                                req.coefficient_, proto_version, (req.flags_ & 1) && req.enable_debug_,
-                                                proxy.sc()->runner_config(), actor_id(this), stats_)
+  td::actor::create_actor<WorkerRunningRequest>(
+      PSTRING() << "request_" << req.request_id_.to_hex(), req.request_id_, connection_id, std::move(req.query_),
+      req.private_key_, req.timeout_, model_base_name(), req.coefficient_, proto_version,
+      (req.flags_ & 1) && req.enable_debug_, proxy.sc()->runner_config(), actor_id(this), stats_)
       .release();
 }
 

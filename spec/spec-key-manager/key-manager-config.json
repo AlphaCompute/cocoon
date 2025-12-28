@@ -1,6 +1,7 @@
 {
   "is_test": "$IS_DEBUG",
   "is_testnet" : false,
+  "check_hashes" : false,
   "add_default_key" : "$IS_DEBUG",
   "http_port" : 13000,
   "rpc_port"  : 13101,

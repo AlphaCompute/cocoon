@@ -1353,7 +1353,8 @@ void ProxyRunner::run_withdraw() {
 td::Result<std::shared_ptr<ProxyWorkerConnectionInfo>> ProxyRunner::choose_connection(const std::string &model_name,
                                                                                       td::int64 tokens_available,
                                                                                       td::int64 max_coefficient,
-                                                                                      td::int64 max_tokens) {
+                                                                                      td::int64 max_tokens,
+                                                                                      td::int32 min_proto_version) {
   LOG(DEBUG) << " max_coefficient=" << max_coefficient << " max_tokens=" << max_tokens
              << " tokens_available=" << tokens_available;
   if (is_disabled()) {
@@ -1379,6 +1380,12 @@ td::Result<std::shared_ptr<ProxyWorkerConnectionInfo>> ProxyRunner::choose_conne
     if (x.second->is_disabled) {
       continue;
     }
+
+    auto conn = static_cast<ProxyInboundWorkerConnection *>(get_connection(x.first));
+    if (!conn || conn->proto_version() < min_proto_version) {
+      continue;
+    }
+
     if (x.second->running_queries() >= x.second->max_active_requests) {
       continue;
     }
@@ -1455,7 +1462,8 @@ void ProxyRunner::forward_query(TcpClient::ConnectionId client_connection_id,
 
   auto to_reserve = adjust_tokens(req->max_tokens_ + req->query_.size(), req->max_coefficient_, 10000);
   auto R_worker_connection_id =
-      choose_connection(req->model_name_, client->tokens_available(), (td::uint32)req->max_coefficient_, to_reserve);
+      choose_connection(req->model_name_, client->tokens_available(), (td::uint32)req->max_coefficient_, to_reserve,
+                        encrypted_with.is_zero() ? 0 : 3);
   if (R_worker_connection_id.is_error()) {
     return fail(R_worker_connection_id.move_as_error());
   }

@@ -6,6 +6,7 @@
 #include "td/actor/actor.h"
 #include "td/utils/Random.h"
 #include "td/utils/SharedSlice.h"
+#include "td/utils/base64.h"
 #include "td/utils/common.h"
 #include "td/utils/filesystem.h"
 #include "td/db/RocksDb.h"
@@ -68,6 +69,7 @@ void KeyManagerRunner::load_config(td::Promise<td::Unit> promise) {
       enable_check_hashes();
     } else {
       set_fake_tdx(true);
+      add_static_private_key();
     }
     set_http_access_hash(conf.http_access_hash_);
     set_is_test(conf.is_test_);
@@ -318,6 +320,17 @@ void KeyManagerRunner::remove_key(td::Bits256 public_key) {
       return;
     }
   }
+}
+
+void KeyManagerRunner::add_static_private_key() {
+  auto P = std::make_unique<PrivateKey>();
+  P->key_type_ = 1;
+  P->private_key.as_slice().copy_from(td::base64_decode("BwrYLmEy2rMgZ/tyCv0AYFVaZPkFu+wNwoSQiJUbOmM=").move_as_ok());
+  P->public_key.as_slice().copy_from(td::base64_decode("+2fQ/NM48g4NSVfZ6CrcEB0uNROkSKOrRgUu4biMWBg=").move_as_ok());
+  P->valid_since_ = (td::int32)td::Clocks::system();
+  P->valid_until_ = 2000000000;
+  P->valid_since_config_version_ = active_config_version_;
+  private_keys_.push_back(std::move(P));
 }
 
 PrivateKey *KeyManagerRunner::generate_key(td::uint8 key_type) {

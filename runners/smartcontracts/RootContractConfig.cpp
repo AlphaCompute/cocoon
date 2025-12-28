@@ -816,6 +816,13 @@ void RootContractConfig::store_stat(BaseRunner *runner, td::StringBuilder &sb) {
   sb << "<tr><td>client delay before close</td><td>" << client_delay_before_close_ << "</td></tr>\n";
   sb << "<tr><td>proxy min stake</td><td>" << to_ton(min_proxy_stake_) << "</td></tr>\n";
   sb << "<tr><td>client min stake</td><td>" << to_ton(min_client_stake_) << "</td></tr>\n";
+  sb << "<tr><td>registered public keys</td><td><table>";
+  for (auto &k : public_keys_) {
+    sb << "<tr><td>" << k.first.to_hex() << "</td><td>" << k.second.key_type << "</td><td>" << k.second.expire_at
+       << "</td></tr>\n";
+  }
+  sb << "</table></td></tr>\n";
+  sb << "<tr><td>key manager addr</td><td>" << key_manager_addr_ << "</td></tr>\n";
   sb << "<tr><td>proxy code hash</td><td>" << proxy_sc_code()->get_hash().to_hex() << "</td></tr>\n";
   sb << "<tr><td>worker code hash</td><td>" << worker_sc_code()->get_hash().to_hex() << "</td></tr>\n";
   sb << "<tr><td>client code hash</td><td>" << client_sc_code()->get_hash().to_hex() << "</td></tr>\n";

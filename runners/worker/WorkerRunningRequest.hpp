@@ -11,7 +11,7 @@
 #include "td/utils/buffer.h"
 #include "WorkerStats.h"
 #include "td/utils/port/Clocks.h"
-#include "runners/helpers/CountTokens.hpp"
+#include "runners/helpers/ValidateRequest.h"
 #include "tl/TlObject.h"
 #include <memory>
 
@@ -22,8 +22,8 @@ class WorkerRunner;
 class WorkerRunningRequest : public td::actor::Actor {
  public:
   WorkerRunningRequest(td::Bits256 proxy_request_id, TcpClient::ConnectionId proxy_connection_id, td::BufferSlice data,
-                       double timeout, std::string model_base_name, td::int32 coefficient, td::int32 proto_version,
-                       bool enable_debug, std::shared_ptr<RunnerConfig> runner_config,
+                       td::Bits256 encrypted_with, double timeout, std::string model_base_name, td::int32 coefficient,
+                       td::int32 proto_version, bool enable_debug, std::shared_ptr<RunnerConfig> runner_config,
                        td::actor::ActorId<WorkerRunner> runner, std::shared_ptr<WorkerStats> stats);
 
   void start_up() override {
@@ -69,6 +69,7 @@ class WorkerRunningRequest : public td::actor::Actor {
   td::BufferSlice data_;
   double timeout_;
   std::string model_base_name_;
+  td::int32 coefficient_;
   td::int32 proto_version_;
   bool enable_debug_;
   td::actor::ActorId<WorkerRunner> runner_;
@@ -82,7 +83,11 @@ class WorkerRunningRequest : public td::actor::Actor {
   bool completed_{false};
   bool sent_answer_{false};
 
-  std::unique_ptr<TokenCounter> tokens_counter_;
+  td::Bits256 worker_private_key_ = td::Bits256::zero();
+  td::Bits256 client_public_key_ = td::Bits256::zero();
+
+  std::shared_ptr<RunnerConfig> runner_config_;
+  std::unique_ptr<AnswerPostprocessor> postprocessor_;
 };
 
 }  // namespace cocoon

@@ -9,8 +9,9 @@ import (
 )
 
 func stream(w http.ResponseWriter, r *http.Request) {
-	io.Copy(io.Discard, r.Body)
-	r.Body.Close()
+  defer r.Body.Close()
+  body, _ := io.ReadAll(r.Body)
+  bodyString := string(body)
 
 	q := r.URL.Query()
 	chunks, _ := strconv.Atoi(q.Get("chunks"))
@@ -26,6 +27,7 @@ func stream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	flusher, _ := w.(http.Flusher)
 
+  fmt.Fprintf(w, `{"request":%s,"chunks":%d,"bytes":%d,"delay":%d}`+"\n", bodyString, chunks, bytesPer, delayMs)
 	for i := 0; i < chunks; i++ {
 		fmt.Fprintf(w, `{"delta":"%0*s","i":%d}`+"\n", bytesPer, "", i)
 		flusher.Flush()

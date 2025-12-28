@@ -110,6 +110,7 @@ class KeyManagerRunner : public BaseRunner {
   /* CONTROL */
   void remove_key(td::Bits256 public_key);
   PrivateKey *generate_key(td::uint8 key_type);
+  void add_static_private_key();
 
   /* HTTP HANDLING */
 

@@ -45,7 +45,7 @@ class ProxyRunner : public BaseRunner {
     return 0;
   }
   static constexpr td::int32 max_proto_version() {
-    return 2;
+    return 3;
   }
 
   /* SIMPLE GETTERS */
@@ -177,7 +177,8 @@ class ProxyRunner : public BaseRunner {
   td::Result<std::shared_ptr<ProxyWorkerConnectionInfo>> choose_connection(const std::string &model_name,
                                                                            td::int64 tokens_available,
                                                                            td::int64 max_coefficient,
-                                                                           td::int64 max_tokens);
+                                                                           td::int64 max_tokens,
+                                                                           td::int32 min_proto_version);
   void forward_query(TcpClient::ConnectionId client_connection_id,
                      ton::tl_object_ptr<cocoon_api::client_runQueryEx> req);
   void finish_request(const td::Bits256 &worker_request_id, const td::Bits256 &client_request_id,

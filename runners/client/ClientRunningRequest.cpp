@@ -10,6 +10,7 @@
 #include "td/utils/Time.h"
 #include "td/utils/buffer.h"
 #include "runners/helpers/HttpSender.hpp"
+#include "runners/helpers/ValidateRequest.h"
 
 #include "auto/tl/cocoon_api_json.h"
 #include "cocoon-tl-utils/cocoon-tl-utils.hpp"
@@ -52,7 +53,7 @@ void ClientRunningRequest::on_payload_downloaded(td::BufferSlice payload) {
   //max_coefficient = 0;
   double timeout = 120.0;
 
-  td::Bits256 encrypted_with;
+  td::Bits256 encrypted_with = td::Bits256::zero();
 
   auto S = [&]() -> td::Status {
     auto b = nlohmann::json::parse(payload.as_slice().begin(), payload.as_slice().end(), nullptr, false, false);
@@ -111,17 +112,11 @@ void ClientRunningRequest::on_payload_downloaded(td::BufferSlice payload) {
       ext_request_id_ = td::sha256_bits256(b["request_guid"].get<std::string>());
       b.erase("request_guid");
     }
-    if (b.contains("encrypted_with")) {
-      if (!b["encrypted_with"].is_string()) {
-        return td::Status::Error(ton::ErrorCode::protoviolation, "field 'encrypted_with' must be a string");
+    if (b.contains("receiver_public_key")) {
+      if (!b["receiver_public_key"].is_string()) {
+        return td::Status::Error(ton::ErrorCode::protoviolation, "field 'receiver_public_key' must be a string");
       }
-      TRY_RESULT(v, td::hex_decode(b["encrypted_with"].get<std::string>()));
-      if (v.size() != 32) {
-        return td::Status::Error(ton::ErrorCode::protoviolation,
-                                 "field 'encrypted_with' must be a hex string of 64 hex chars");
-      }
-      encrypted_with.as_slice().copy_from(v);
-      b.erase("encrypted_with");
+      TRY_RESULT_ASSIGN(encrypted_with, parse_bits256_from_json(b["receiver_public_key"].get<std::string>()));
     }
     payload = td::BufferSlice(b.dump());
     return td::Status::OK();

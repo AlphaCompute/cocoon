@@ -311,6 +311,7 @@ set(COMMON_SOURCE
  runners/BaseRunner.cpp runners/smartcontracts/RootContractConfig.cpp runners/smartcontracts/SmartContract.cpp net/TcpConnection.cpp net/TcpClient.cpp 
  runners/smartcontracts/CocoonWallet.cpp runners/smartcontracts/ProxyContract.cpp runners/smartcontracts/ClientContract.cpp 
  runners/smartcontracts/WorkerContract.cpp runners/helpers/CountTokens.cpp runners/helpers/HttpSender.cpp runners/TonlibWrapper.cpp
+ runners/helpers/ValidateRequest.cpp
 )
 
 set(JSON_BuildTests OFF CACHE INTERNAL "")
@@ -352,7 +353,6 @@ add_executable(worker-runner
   runners/worker/WorkerRunner.cpp 
   runners/worker/WorkerRunningRequest.cpp
   runners/worker/WorkerUplinkMonitor.cpp
-  runners/helpers/ValidateRequest.cpp
   )
 target_link_libraries(worker-runner PRIVATE cocoon_common )
 add_executable(key-manager-runner 
@@ -360,6 +360,10 @@ add_executable(key-manager-runner
   runners/key-manager/KeyManagerRunner.cpp
   )
 target_link_libraries(key-manager-runner PRIVATE cocoon_common )
+add_executable(encrypt-message 
+  runners/EncryptMessage.cpp
+  )
+target_link_libraries(encrypt-message PRIVATE cocoon_common )
 
 # Sync time utility
 add_executable(sync-time runners/utils/sync_time.cpp )

@@ -692,7 +692,11 @@ void BaseRunner::alarm() {
     if (role_ == RunnerRole::Proxy || role_ == RunnerRole::Worker) {
       get_private_keys_from_key_manager();
     }
-    next_key_manager_request_at_ = td::Timestamp::in(td::Random::fast(60.0, 120.0));
+    if (role_ == RunnerRole::Proxy) {
+      next_key_manager_request_at_ = td::Timestamp::in(td::Random::fast(5.0, 10.0));
+    } else {
+      next_key_manager_request_at_ = td::Timestamp::in(td::Random::fast(60.0, 120.0));
+    }
   }
   alarm_timestamp() = td::Timestamp::in(td::Random::fast(1.0, 2.0));
   alarm_timestamp().relax(next_monitor_at_);
