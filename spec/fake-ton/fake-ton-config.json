@@ -25,6 +25,6 @@
     }
   ],
   "root_owner_address" : "0QBgPMq7ye2WRcudRHK_-yjHwMXjeN-UCzAuoo06TR6hmgHV",
-  "key_manager_address" : "127.0.0.1:13001"
+  "key_manager_address" : "$EXTERNAL_IP:$EXTERNAL_KEY_MANAGER_PORT"
 }
 

@@ -373,7 +373,7 @@ target_link_libraries(sync-time PRIVATE cocoon_common )
 add_executable(generate-cocoon-wallet-address runners/utils/generate-cocoon-wallet-address.cpp )
 target_link_libraries(generate-cocoon-wallet-address PRIVATE cocoon_common )
 
-add_custom_target(runners DEPENDS client-runner proxy-runner worker-runner sync-time generate-cocoon-wallet-address)
+add_custom_target(runners DEPENDS client-runner proxy-runner worker-runner key-manager-runner sync-time generate-cocoon-wallet-address)
 
 # Build everything needed for cocoon-launch
 set(COCOON_ALL_DEPS runners cocoon-subst router gen-cert)

@@ -21,7 +21,7 @@ mkdir $SRCDIR/cocoon/build-reprodebian || true
 # Install binaries to guest image
 mkdir -p "$DESTDIR/usr/bin"
 
-for binary in tee/sgx-enclave/seal-client tee/sgx-enclave/seal-server tee/gen-cert tee/router worker-runner client-runner proxy-runner sync-time tee/cocoon-subst tee/health-monitor tee/health-client; do
+for binary in tee/sgx-enclave/seal-client tee/sgx-enclave/seal-server tee/gen-cert tee/router worker-runner client-runner proxy-runner key-manager-runner sync-time tee/cocoon-subst tee/health-monitor tee/health-client; do
   cp "$SRCDIR/cocoon/build-reprodebian/$binary" "$DESTDIR/usr/bin/"
 done
 

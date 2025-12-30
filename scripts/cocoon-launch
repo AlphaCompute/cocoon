@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cocoon-launch - COCOON node launcher (worker/proxy/client, QEMU or local)
+# cocoon-launch - COCOON node launcher (worker/proxy/client/key-manager, QEMU or local)
 import os
 import re
 import sys
@@ -76,6 +76,7 @@ class Config:
     external_ip: str | None = None
     external_worker_port: int | None = None
     external_client_port: int | None = None
+    external_key_manager_port: int | None = None
     node_wallet_key: str | None = None  # for worker and client
 
     # Runtime control
@@ -126,7 +127,7 @@ class Config:
         # Group fields by category (matching dataclass order)
         sections = [
             ('Common', ['root_contract_address', 'model', 'external_ip', 'external_worker_port',
-                        'external_client_port', 'node_wallet_key']),
+                        'external_client_port', 'external_key_manager_port', 'node_wallet_key']),
             ('Runtime', ['test', 'fake_ton', 'local_mode', 'instance']),
             ('Worker', ['worker_coefficient', 'hf_token']),
             ('TON configs', ['ton_config_base', 'ton_config']),
@@ -191,6 +192,8 @@ class Config:
             vars.setdefault('EXTERNAL_WORKER_PORT', self.external_worker_port + offset)
         if self.external_client_port:
             vars.setdefault('EXTERNAL_CLIENT_PORT', self.external_client_port + offset)
+        if self.external_key_manager_port:
+            vars.setdefault('EXTERNAL_KEY_MANAGER_PORT', self.external_key_manager_port + offset)
         if self.worker_coefficient:
             vars.setdefault('WORKER_COEFFICIENT', self.worker_coefficient)
         if self.hf_token:
@@ -257,6 +260,7 @@ def load_config_from_file(cli_args) -> Config:
         external_ip=get('external_ip', '10.0.2.2') if fake_ton else None,
         external_worker_port=getint('external_worker_port', 11001) if fake_ton else None,
         external_client_port=getint('external_client_port', 11002) if fake_ton else None,
+        external_key_manager_port=getint('external_key_manager_port', 13001) if fake_ton else None,
         node_wallet_key=get('node_wallet_key',
                             'gaEatwGNgLGOeFI/TRGfPdJG/K4G8picYHQkDHpLQ9w=' if fake_ton else None),
         # Runtime control
@@ -299,6 +303,10 @@ def load_config_from_file(cli_args) -> Config:
                          getint('client_rpc_port', 11002)]
         cfg.ssh_port = getint('ssh_port', 11005)
         cfg.vsock_cid = getint('vsock_cid', 7)  # Proxy: 7, 17, 27...
+    elif node_type == 'key-manager':
+        cfg.tcp_ports = [getint('http_port', 13000), getint('key_manager_rpc_port', 13001),]
+        cfg.ssh_port = getint('ssh_port', 13005)
+        cfg.vsock_cid = getint('vsock_cid', 8)  # Worker: 6, 16, 26...
     elif node_type == 'client':
         cfg.local_run_dir = tempfile.mkdtemp(prefix='cocoon-client-')
         cfg.extra_vars.update({
@@ -309,7 +317,7 @@ def load_config_from_file(cli_args) -> Config:
     # Validate
     if not node_type:
         sys.exit('ERROR: type not set in config')
-    if node_type not in ('worker', 'proxy', 'client'):
+    if node_type not in ('worker', 'proxy', 'client', 'key-manager'):
         sys.exit(f'ERROR: Invalid type: {node_type}')
     if not cfg.owner_address:
         sys.exit('ERROR: owner_address required')
@@ -688,6 +696,7 @@ def run_local_all(cfg):
             external_ip='127.0.0.1',  # Local-all uses localhost
             external_worker_port=11001,
             external_client_port=11002,
+            external_key_manager_port=13001,
             node_wallet_key=app_key,  # just for tests make it same as APP_KEY
             fake_ton=True,
             local_mode=True,  # Don't build models for local execution
@@ -809,7 +818,7 @@ def parse_args():
 
     # Config file or explicit args
     parser.add_argument('config_file', nargs='?', help='Config file (INI format)')
-    parser.add_argument('--type', choices=['worker', 'proxy', 'client'], help='Node type')
+    parser.add_argument('--type', choices=['worker', 'proxy', 'client', 'key-manager'], help='Node type')
     parser.add_argument('--spec', help='Path to spec directory')
 
     # Node config
@@ -821,6 +830,7 @@ def parse_args():
     parser.add_argument('--external-ip', help='EXTERNAL_IP')
     parser.add_argument('--external-worker-port', help='EXTERNAL_WORKER_PORT')
     parser.add_argument('--external-client-port', help='EXTERNAL_CLIENT_PORT')
+    parser.add_argument('--external-key-manager-port', help='EXTERNAL_KEY_MANAGER_PORT')
     parser.add_argument('--wallet-private-key', dest='node_wallet_key', help='NODE_WALLET_KEY')
     parser.add_argument('--node-wallet_key', dest='node_wallet_key', help='NODE_WALLET_KEY')
 
