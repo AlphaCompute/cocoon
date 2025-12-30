@@ -80,9 +80,9 @@ void ClientRunningRequest::on_payload_downloaded(td::BufferSlice payload) {
         return td::Status::Error(ton::ErrorCode::protoviolation, "field 'max_tokens' must be positive integer");
       }
       max_tokens = b["max_tokens"].get<td::int32>();
+    } else {
+      b["max_tokens"] = max_tokens;
     }
-    b["max_tokens"] = max_tokens;
-    b["max_completion_tokens"] = max_tokens;
     if (b.contains("max_coefficient")) {
       if (!b["max_coefficient"].is_number_unsigned()) {
         return td::Status::Error(ton::ErrorCode::protoviolation,
