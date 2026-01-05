@@ -225,6 +225,10 @@ void ClientRunningRequest::return_error_str(td::int32 ton_error_code, std::strin
       error_code = ton::http::HttpStatusCode::status_bad_gateway;
       error_string = "Bad Gateway";
       break;
+    case ton::ErrorCode::protoviolation:
+      error_code = ton::http::HttpStatusCode::status_bad_request;
+      error_string = "Bad Request";
+      break;
     default:
       error_code = ton::http::HttpStatusCode::status_internal_server_error;
       error_string = "Internal Server Error";
