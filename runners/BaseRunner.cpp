@@ -5,6 +5,7 @@
 #include "block.h"
 #include "cocoon/tdx.h"
 #include "common/bitstring.h"
+#include "boost-http/http.h"
 #include "http/http.h"
 #include "net/TcpClient.h"
 #include "td/actor/ActorId.h"
@@ -12,6 +13,7 @@
 #include "td/actor/MultiPromise.h"
 #include "td/actor/PromiseFuture.h"
 #include "td/actor/actor.h"
+#include "td/actor/common.h"
 #include "td/utils/Random.h"
 #include "td/utils/SharedSlice.h"
 #include "td/utils/Status.h"
@@ -53,6 +55,20 @@
 #include <utility>
 
 namespace cocoon {
+
+const std::string &get_from_sorted_list(const std::vector<std::pair<std::string, std::string>> &vec,
+                                        const std::string &name) {
+  auto it = std::lower_bound(
+      vec.begin(), vec.end(), name,
+      [](const std::pair<std::string, td::string> &l, const std::string &name) { return l.first < name; });
+
+  if (it == vec.end() || it->first != name) {
+    static const std::string empty = "";
+    return empty;
+  } else {
+    return it->second;
+  }
+}
 
 /* 
  *
@@ -268,23 +284,28 @@ void BaseRunner::load_config_completed() {
 }
 void BaseRunner::initialize_http_server(td::Promise<td::Unit> promise) {
   if (http_port_ > 0) {
-    class Cb : public ton::http::HttpServer::Callback {
+    class Cb : public http::HttpCallback {
      public:
-      Cb(td::actor::ActorId<BaseRunner> client) : client_(std::move(client)) {
+      Cb(td::actor::ActorId<BaseRunner> client, td::actor::Scheduler *scheduler)
+          : client_(std::move(client)), scheduler_(scheduler) {
       }
-
-      void receive_request(
-          std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) override {
-        td::actor::send_closure(client_, &BaseRunner::receive_http_request_outer, std::move(request),
-                                std::move(payload), std::move(promise));
+      void receive_request(http::HttpCallback::RequestType request_type,
+                           std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                           std::vector<std::pair<std::string, std::string>> args, std::string body,
+                           std::unique_ptr<http::HttpRequestCallback> answer_callback) override {
+        CHECK(answer_callback);
+        scheduler_->run_in_context([&]() {
+          td::actor::send_closure(client_, &BaseRunner::receive_http_request_outer, request_type, std::move(headers),
+                                  std::move(path), std::move(args), std::move(body), std::move(answer_callback));
+        });
       }
 
      private:
       td::actor::ActorId<BaseRunner> client_;
+      td::actor::Scheduler *scheduler_;
     };
-    http_server_ = ton::http::HttpServer::create(http_port_, std::make_unique<Cb>(actor_id(this)));
+
+    http::init_http_server(http_port_, std::make_shared<Cb>(actor_id(this), scheduler_));
   }
   promise.set_value(td::Unit());
 }
@@ -609,50 +630,37 @@ std::unique_ptr<TcpClient::Callback> BaseRunner::make_tcp_client_callback() {
  * HANDLERS
  *
  */
-void BaseRunner::receive_http_request_outer(
-    std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-    td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise) {
-  auto R = http_parse_url(request->url());
-  if (R.is_error()) {
-    ton::http::answer_error(ton::http::HttpStatusCode::status_bad_request, "bad request", std::move(promise));
-    return;
-  }
-
-  auto info = R.move_as_ok();
-
-  if (info.url == "/perf") {
-    connect(std::move(promise), generate_perf_stats(std::move(info)));
+void BaseRunner::receive_http_request_outer(http::HttpCallback::RequestType request_type,
+                                            std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                            std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                            std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+  if (path == "/perf") {
+    generate_perf_stats(std::move(answer_callback)).detach();
     return;
   }
 
   {
-    auto R = http_parse_url(request->url());
-    if (R.is_ok()) {
-      auto res = R.move_as_ok();
-      auto it = custom_http_handlers_.find(res.url);
-      if (it != custom_http_handlers_.end()) {
-        if (http_access_hash_.size() > 0 && res.get_args["access_hash"] != http_access_hash_) {
-          ton::http::answer_error(ton::http::HttpStatusCode::status_bad_request, "bad request", std::move(promise));
-          return;
-        }
-        it->second(res.url, res.get_args, std::move(request), std::move(payload), std::move(promise));
+    auto it = custom_http_handlers_.find(path);
+    if (it != custom_http_handlers_.end()) {
+      if (http_access_hash_.size() > 0 && get_from_sorted_list(args, "access_hash") != http_access_hash_) {
+        http_send_static_answer(403 /*access denied */, "", std::move(answer_callback));
         return;
       }
+      it->second(request_type, std::move(headers), std::move(path), std::move(args), std::move(body),
+                 std::move(answer_callback));
+      return;
     }
   }
 
-  receive_http_request(std::move(request), std::move(payload), std::move(promise));
+  receive_http_request(request_type, std::move(headers), std::move(path), std::move(args), std::move(body),
+                       std::move(answer_callback));
 }
 
-void BaseRunner::receive_http_request(
-    std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-    td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise) {
-  if (payload->payload_type() != ton::http::HttpPayload::PayloadType::pt_empty) {
-    ton::http::answer_error(ton::http::HttpStatusCode::status_bad_request, "bad request", std::move(promise));
-    return;
-  }
-  std::string data = "<http><body>OK</body></http>";
-  http_send_static_answer(std::move(data), std::move(promise));
+void BaseRunner::receive_http_request(http::HttpCallback::RequestType request_type,
+                                      std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                      std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                      std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+  http_send_static_answer(404, "not found", std::move(answer_callback));
 }
 
 /*
@@ -827,98 +835,51 @@ void BaseRunner::got_private_keys_from_key_manager(td::BufferSlice R) {
  * HTTP
  *
  */
-td::actor::Task<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-BaseRunner::generate_perf_stats(HttpUrlInfo info) {
+td::actor::Task<td::Unit> BaseRunner::generate_perf_stats(std::unique_ptr<http::HttpRequestCallback> answer_callback) {
   auto actor_stats = co_await td::actor::ask(actor_stats_, &td::actor::ActorStats::prepare_stats);
-  co_return http_gen_static_answer(td::BufferSlice(actor_stats), "text/plain; charset=utf-8");
+  http_send_static_answer(td::BufferSlice(actor_stats), std::move(answer_callback), "text/plain; charset=utf-8");
+  co_return td::Unit();
+}
+void BaseRunner::http_send_static_answer(td::int32 code, std::string text,
+                                         std::unique_ptr<http::HttpRequestCallback> answer_callback,
+                                         std::string content_type) {
+  CHECK(answer_callback);
+  static const std::vector<std::pair<std::string, std::string>> headers{
+      {"Access-Control-Allow-Origin", "*"},
+      {"Access-Control-Allow-Methods", "GET, POST, OPTIONS"},
+      {"Access-Control-Allow-Headers", "Content-Type, Authorization"}};
+  answer_callback->receive_answer(code, content_type, headers, std::move(text), true);
 }
 
-void BaseRunner::http_send_static_answer(
-    td::Result<td::BufferSlice> R,
-    td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise,
-    std::string content_type) {
-  promise.set_result(http_gen_static_answer(std::move(R), std::move(content_type)));
-}
-
-td::Result<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-BaseRunner::http_gen_static_answer(td::Result<td::BufferSlice> R, std::string content_type) {
-  ton::http::HttpStatusCode status_code = ton::http::HttpStatusCode::status_ok;
-  std::string status = "ok";
-  td::BufferSlice data;
-
-  if (R.is_error()) {
+void BaseRunner::http_send_static_answer(td::Result<td::BufferSlice> R,
+                                         std::unique_ptr<http::HttpRequestCallback> answer_callback,
+                                         std::string content_type) {
+  if (R.is_ok()) {
+    http_send_static_answer(200, R.move_as_ok().as_slice().str(), std::move(answer_callback), std::move(content_type));
+  } else {
     auto code = R.error().code();
+    td::int32 status_code;
     switch (code) {
       case ton::ErrorCode::cancelled:
       case ton::ErrorCode::notready:
-        status_code = ton::http::HttpStatusCode::status_bad_gateway;
-        status = "bad gateway";
+        status_code = 502 /* bad gateway */;
         break;
       case ton::ErrorCode::timeout:
-        status_code = ton::http::HttpStatusCode::status_gateway_timeout;
-        status = "gateway timeout";
+        status_code = 504 /* gateway timeout */;
         break;
       case ton::ErrorCode::error:
       case ton::ErrorCode::protoviolation:
       case ton::ErrorCode::warning:
-        status_code = ton::http::HttpStatusCode::status_bad_request;
-        status = "bad request";
+        status_code = 400 /* bad request */;
         break;
       case ton::ErrorCode::failure:
       default:
-        status_code = ton::http::HttpStatusCode::status_internal_server_error;
-        status = "internal server error";
+        status_code = 500 /* internal error */;
         break;
     }
-    data = td::BufferSlice(td::Slice(PSTRING() << "received error: " << R.move_as_error() << "\n"));
-  } else {
-    data = R.move_as_ok();
+    http_send_static_answer(status_code, PSTRING() << "Technical data: " << R.move_as_error(),
+                            std::move(answer_callback), std::move(content_type));
   }
-
-  auto response = ton::http::HttpResponse::create("HTTP/1.0", status_code, status, false, false).move_as_ok();
-
-  response->add_header(ton::http::HttpHeader{"Access-Control-Allow-Origin", "*"});
-  response->add_header(ton::http::HttpHeader{"Access-Control-Allow-Methods", "GET, POST, OPTIONS"});
-  response->add_header(ton::http::HttpHeader{"Access-Control-Allow-Headers", "Content-Type, Authorization"});
-  response->add_header(ton::http::HttpHeader{"Content-Type", content_type});
-  response->add_header(ton::http::HttpHeader{"Content-Length", PSTRING() << data.size()});
-  response->complete_parse_header();
-
-  auto P = response->create_empty_payload().move_as_ok();
-  P->add_chunk(std::move(data));
-  P->complete_parse();
-  return std::make_pair(std::move(response), std::move(P));
-}
-
-td::Result<BaseRunner::HttpUrlInfo> BaseRunner::http_parse_url(std::string url) {
-  BaseRunner::HttpUrlInfo res;
-  td::Slice S = url;
-  auto p = S.find('?');
-  if (p == td::Slice::npos) {
-    res.url = url;
-    return res;
-  }
-  res.url = url.substr(0, p);
-  S.remove_prefix(p + 1);
-  while (S.size() > 0) {
-    auto x = S.find('&');
-    td::Slice a;
-    if (x == td::Slice::npos) {
-      a = S;
-      S = td::Slice();
-    } else {
-      a = S.copy().truncate(x);
-      S.remove_prefix(x + 1);
-    }
-
-    x = a.find('=');
-    if (x == td::Slice::npos) {
-      res.get_args.emplace(a.str(), "");
-    } else {
-      res.get_args.emplace(a.copy().truncate(x).str(), a.copy().remove_prefix(x + 1).str());
-    }
-  }
-  return res;
 }
 
 /*

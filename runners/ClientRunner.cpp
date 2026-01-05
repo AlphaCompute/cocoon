@@ -35,7 +35,8 @@ int main(int argc, char **argv) {
   td::actor::ActorOwn<cocoon::ClientRunner> client_runner;
 
   scheduler.run_in_context([&] {
-    client_runner = td::actor::create_actor<cocoon::ClientRunner>("client", std::move(engine_config_filename));
+    client_runner =
+        td::actor::create_actor<cocoon::ClientRunner>("client", std::move(engine_config_filename), &scheduler);
     td::actor::send_lambda(client_runner, [&]() {
       auto &ptr = client_runner.get_actor_unsafe();
       if (pseudo_config_filename.size() > 0) {

@@ -22,7 +22,8 @@ struct WorkerModel {
 
 class ProxyRunner : public BaseRunner {
  public:
-  ProxyRunner(std::string engine_config_filename) : BaseRunner(RunnerRole::Proxy, std::move(engine_config_filename)) {
+  ProxyRunner(std::string engine_config_filename, td::actor::Scheduler *scheduler)
+      : BaseRunner(RunnerRole::Proxy, std::move(engine_config_filename), scheduler) {
   }
 
   /* CONST PARAMS */
@@ -164,10 +165,6 @@ class ProxyRunner : public BaseRunner {
   void receive_message(TcpClient::ConnectionId connection_id, td::BufferSlice query) override;
   void receive_query(TcpClient::ConnectionId connection_id, td::BufferSlice query,
                      td::Promise<td::BufferSlice> promise) override;
-  void receive_http_request(
-      std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-      td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise)
-      override;
 
   /* CONTROL */
   void proxy_enable_disable(td::int64 value);

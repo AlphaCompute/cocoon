@@ -20,7 +20,8 @@ namespace cocoon {
 
 class ClientRunner : public BaseRunner {
  public:
-  ClientRunner(std::string engine_config_filename) : BaseRunner(RunnerRole::Client, std::move(engine_config_filename)) {
+  ClientRunner(std::string engine_config_filename, td::actor::Scheduler *scheduler)
+      : BaseRunner(RunnerRole::Client, std::move(engine_config_filename), scheduler) {
   }
 
   /* CONST PARAMS */
@@ -69,13 +70,11 @@ class ClientRunner : public BaseRunner {
   }
 
   /* REQUEST */
-  void run_http_request(
-      std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-      td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-          promise);
-  void run_get_models_request(
-      td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-          promise);
+  void run_http_request(http::HttpCallback::RequestType request_type,
+                        std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                        std::vector<std::pair<std::string, std::string>> args, std::string body,
+                        std::unique_ptr<http::HttpRequestCallback> answer_callback);
+  void run_get_models_request(std::unique_ptr<http::HttpRequestCallback> answer_callback);
   void finish_request(td::Bits256 request_id, std::shared_ptr<ClientProxyInfo> proxy);
 
   /* ALLOCATORS */
@@ -101,10 +100,10 @@ class ClientRunner : public BaseRunner {
   void receive_query(TcpClient::ConnectionId connection_id, td::BufferSlice query,
                      td::Promise<td::BufferSlice> promise) override {
   }
-  void receive_http_request(
-      std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-      td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise)
-      override;
+  void receive_http_request(http::HttpCallback::RequestType request_type,
+                            std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                            std::vector<std::pair<std::string, std::string>> args, std::string body,
+                            std::unique_ptr<http::HttpRequestCallback> answer_callback) override;
 
   /* PROXY DB*/
   td::Result<std::shared_ptr<ClientProxyInfo>> register_proxy(

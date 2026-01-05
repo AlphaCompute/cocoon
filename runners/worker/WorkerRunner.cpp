@@ -172,55 +172,47 @@ td::Status WorkerRunner::create_http_client(td::Slice S) {
 void WorkerRunner::custom_initialize(td::Promise<td::Unit> promise) {
   params_version_ = runner_config()->root_contract_config->params_version();
 
-  register_custom_http_handler(
-      "/stats",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_generate_main(), std::move(promise)); });
-
+  register_custom_http_handler("/stats", [&](http::HttpCallback::RequestType request_type,
+                                             std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                             std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                             std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+    http_send_static_answer(http_generate_main(), std::move(answer_callback));
+  });
   register_custom_http_handler(
       "/jsonstats",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) {
-        http_send_static_answer(http_generate_json_stats(), std::move(promise), "application/json");
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_generate_json_stats(), std::move(answer_callback), "application/json");
       });
-
   register_custom_http_handler(
       "/request/payout",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_payout(get_args["proxy"]), std::move(promise)); });
-
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_payout(get_from_sorted_list(args, "proxy")), std::move(answer_callback));
+      });
   register_custom_http_handler(
       "/request/enable",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_worker_set_force_disabled(false), std::move(promise)); });
-
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_worker_set_force_disabled(false), std::move(answer_callback));
+      });
   register_custom_http_handler(
       "/request/disable",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_worker_set_force_disabled(true), std::move(promise)); });
-
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_worker_set_force_disabled(true), std::move(answer_callback));
+      });
   register_custom_http_handler(
       "/request/change_coefficient",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) {
-        auto it = get_args.find("coefficient");
-        if (it != get_args.end()) {
-          http_send_static_answer(http_worker_change_coefficient(it->second), std::move(promise));
-        } else {
-          http_send_static_answer(http_worker_change_coefficient(), std::move(promise));
-        }
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_worker_change_coefficient(get_from_sorted_list(args, "coefficient")),
+                                std::move(answer_callback));
       });
 
   cocoon_wallet_initialize_wait_for_balance_and_get_seqno(
@@ -372,13 +364,6 @@ void WorkerRunner::receive_query(TcpClient::ConnectionId connection_id, td::Buff
     default:
       LOG(ERROR) << "dropping received query: received query with unknown magic " << td::format::as_hex(magic);
   }
-}
-
-void WorkerRunner::receive_http_request(
-    std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-    td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise) {
-  /* 404 */
-  ton::http::answer_error(ton::http::HttpStatusCode::status_bad_request, "not found", std::move(promise));
 }
 
 /*

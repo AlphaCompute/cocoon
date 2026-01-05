@@ -24,7 +24,7 @@
 #include "tl/TlObject.h"
 #include "ton/tonlib/tonlib/TonlibClient.h"
 #include "net/TcpClient.h"
-#include "http/http-server.h"
+#include "boost-http/http.h"
 #include "crypto/block/block.h"
 #include "td/utils/as.h"
 #include "vm/cells/Cell.h"
@@ -36,6 +36,7 @@
 #include "helpers/Ton.h"
 #include "helpers/SimpleJsonSerializer.hpp"
 
+#include <algorithm>
 #include <csignal>
 #include <functional>
 #include <memory>
@@ -59,10 +60,13 @@ RemoteAppType remote_app_type_worker();
 RemoteAppType remote_app_type_key_manager();
 RemoteAppType remote_app_type_unknown();
 
-using HttpHandler = std::function<void(
-    std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-    std::shared_ptr<ton::http::HttpPayload> payload,
-    td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise)>;
+using HttpHandler = std::function<void(http::HttpCallback::RequestType request_type,
+                                       std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                       std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                       std::unique_ptr<http::HttpRequestCallback> answer_callback)>;
+
+const std::string &get_from_sorted_list(const std::vector<std::pair<std::string, std::string>> &vec,
+                                        const std::string &name);
 
 class BaseConnection {
  public:
@@ -469,8 +473,8 @@ class BaseRunner : public td::actor::Actor {
   }
 
   /* main */
-  BaseRunner(RunnerRole role, std::string engine_config_filename)
-      : role_(std::move(role)), engine_config_filename_(std::move(engine_config_filename)) {
+  BaseRunner(RunnerRole role, std::string engine_config_filename, td::actor::Scheduler *scheduler)
+      : role_(std::move(role)), engine_config_filename_(std::move(engine_config_filename)), scheduler_(scheduler) {
   }
 
   /* initialize */
@@ -651,29 +655,23 @@ class BaseRunner : public td::actor::Actor {
   virtual void receive_query(TcpClient::ConnectionId connection_id, td::BufferSlice query,
                              td::Promise<td::BufferSlice> promise) {
   }
-  void receive_http_request_outer(
-      std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-      td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-          promise);
-  virtual void receive_http_request(
-      std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-      td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-          promise);
+  void receive_http_request_outer(http::HttpCallback::RequestType request_type,
+                                  std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                  std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                  std::unique_ptr<http::HttpRequestCallback> answer_callback);
+  virtual void receive_http_request(http::HttpCallback::RequestType request_type,
+                                    std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                    std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                    std::unique_ptr<http::HttpRequestCallback> answer_callback);
 
   /* http */
-  static td::Result<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-  http_gen_static_answer(td::Result<td::BufferSlice> R, std::string content_type = "text/html; charset=utf-8");
-  static void http_send_static_answer(
-      td::Result<td::BufferSlice> R,
-      td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise,
-      std::string content_type = "text/html; charset=utf-8");
-  struct HttpUrlInfo {
-    std::string url;
-    std::map<std::string, std::string> get_args;
-  };
-  td::actor::Task<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-  generate_perf_stats(::cocoon::BaseRunner::HttpUrlInfo info);
-  static td::Result<HttpUrlInfo> http_parse_url(std::string url);
+  static void http_send_static_answer(td::int32 code, std::string text,
+                                      std::unique_ptr<http::HttpRequestCallback> answer_callback,
+                                      std::string content_type = "text/html; charset=utf-8");
+  static void http_send_static_answer(td::Result<td::BufferSlice> R,
+                                      std::unique_ptr<http::HttpRequestCallback> answer_callback,
+                                      std::string content_type = "text/html; charset=utf-8");
+  td::actor::Task<td::Unit> generate_perf_stats(std::unique_ptr<http::HttpRequestCallback> answer_callback);
   void register_custom_http_handler(std::string url, HttpHandler handler) {
     CHECK(custom_http_handlers_.emplace(url, handler).second);
   }
@@ -764,7 +762,6 @@ class BaseRunner : public td::actor::Actor {
   std::shared_ptr<RunnerConfig> runner_config_;
   td::int32 root_contract_ts_{0};
   td::actor::ActorOwn<TcpClient> client_;
-  td::actor::ActorOwn<ton::http::HttpServer> http_server_;
 
   std::map<TcpClient::ConnectionId, std::unique_ptr<BaseConnection>> all_connections_;
   std::map<TcpClient::TargetId, std::unique_ptr<ProxyTarget>> proxy_targets_;
@@ -819,6 +816,8 @@ class BaseRunner : public td::actor::Actor {
   std::unique_ptr<KeyManagerOutboundConnection> key_manager_connection_;
 
   std::map<std::string, HttpHandler> custom_http_handlers_;
+
+  td::actor::Scheduler *scheduler_;
 };
 
 }  // namespace cocoon

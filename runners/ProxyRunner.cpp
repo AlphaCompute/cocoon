@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   td::actor::ActorOwn<cocoon::ProxyRunner> proxy_runner;
 
   scheduler.run_in_context([&] {
-    proxy_runner = td::actor::create_actor<cocoon::ProxyRunner>("proxy", std::move(engine_config_filename));
+    proxy_runner = td::actor::create_actor<cocoon::ProxyRunner>("proxy", std::move(engine_config_filename), &scheduler);
     td::actor::send_lambda(proxy_runner, [&]() {
       auto &ptr = proxy_runner.get_actor_unsafe();
       if (pseudo_config_filename.size() > 0) {

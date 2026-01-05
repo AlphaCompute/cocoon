@@ -2,6 +2,7 @@
 #include "auto/tl/cocoon_api.h"
 #include "auto/tl/cocoon_api.hpp"
 #include "auto/tl/cocoon_api_json.h"
+#include "boost-http/http.h"
 #include "checksum.h"
 #include "common/bitstring.h"
 #include "errorcode.h"
@@ -498,63 +499,61 @@ void ProxyRunner::custom_initialize(td::Promise<td::Unit> promise) {
         });
   }
 
-  register_custom_http_handler(
-      "/stats",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_generate_main(), std::move(promise)); });
-
+  register_custom_http_handler("/stats", [&](http::HttpCallback::RequestType request_type,
+                                             std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                             std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                             std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+    http_send_static_answer(http_generate_main(), std::move(answer_callback));
+  });
   register_custom_http_handler(
       "/jsonstats",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) {
-        http_send_static_answer(http_generate_json_stats(), std::move(promise), "application/json");
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_generate_json_stats(), std::move(answer_callback), "application/json");
       });
-
   register_custom_http_handler(
       "/request/payout",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_payout(get_args["worker"]), std::move(promise)); });
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_payout(get_from_sorted_list(args, "worker")), std::move(answer_callback));
+      });
   register_custom_http_handler(
       "/request/withdraw",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_withdraw(), std::move(promise)); });
-
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_withdraw(), std::move(answer_callback));
+      });
   register_custom_http_handler(
       "/request/charge",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_charge(get_args["client"]), std::move(promise)); });
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_charge(get_from_sorted_list(args, "client")), std::move(answer_callback));
+      });
   register_custom_http_handler(
       "/request/disable",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) {
-        if (request->method() != "POST" && request->method() != "post") {
-          http_send_static_answer(wrap_short_answer_to_http("disable must be a post request"), std::move(promise));
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        if (request_type == http::HttpCallback::RequestType::Post) {
+          http_send_static_answer(http_enable_disable(std::numeric_limits<td::int64>::max()),
+                                  std::move(answer_callback));
         } else {
-          http_send_static_answer(http_enable_disable(std::numeric_limits<td::int64>::max()), std::move(promise));
+          http_send_static_answer(404, "not found", std::move(answer_callback));
         }
       });
   register_custom_http_handler(
       "/request/enable",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) {
-        if (request->method() != "POST" && request->method() != "post") {
-          http_send_static_answer(wrap_short_answer_to_http("enable must be a post request"), std::move(promise));
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        if (request_type == http::HttpCallback::RequestType::Post) {
+          http_send_static_answer(http_enable_disable(0), std::move(answer_callback));
         } else {
-          http_send_static_answer(http_enable_disable(0), std::move(promise));
+          http_send_static_answer(404, "not found", std::move(answer_callback));
         }
       });
 }
@@ -1288,12 +1287,6 @@ void ProxyRunner::receive_query(TcpClient::ConnectionId connection_id, td::Buffe
     default:
       LOG(ERROR) << "received proxy query with unknown magic " << td::format::as_hex(magic);
   }
-}
-
-void ProxyRunner::receive_http_request(
-    std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-    td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise) {
-  ton::http::answer_error(ton::http::HttpStatusCode::status_bad_request, "bad request", std::move(promise));
 }
 
 /* CONTROL */

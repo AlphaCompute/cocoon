@@ -312,14 +312,18 @@ set(COMMON_SOURCE
  runners/smartcontracts/CocoonWallet.cpp runners/smartcontracts/ProxyContract.cpp runners/smartcontracts/ClientContract.cpp 
  runners/smartcontracts/WorkerContract.cpp runners/helpers/CountTokens.cpp runners/helpers/HttpSender.cpp runners/TonlibWrapper.cpp
  runners/helpers/ValidateRequest.cpp
+
+ boost-http/http.cpp
 )
 
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 set(JSON_Install OFF CACHE INTERNAL "")
 add_subdirectory(third-party/nlohmann-json)
+find_package(Boost REQUIRED COMPONENTS system thread)
+
 
 set(COMMON_LIBRARIES
-  tdutils tdactor tdnet tddb cocoon_tl_api tl_api cocoon-tl-utils tonhttp tonlib tdnet_ported cocoon git nlohmann_json::nlohmann_json
+  tdutils tdactor tdnet tddb cocoon_tl_api tl_api cocoon-tl-utils tonhttp tonlib tdnet_ported cocoon git nlohmann_json::nlohmann_json Boost::system Boost::thread
 )
 
 add_library(cocoon_common ${COMMON_SOURCE})

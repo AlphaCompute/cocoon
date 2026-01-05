@@ -114,34 +114,39 @@ void KeyManagerRunner::custom_initialize(td::Promise<td::Unit> promise) {
     return td::Status::OK();
   });
 
+  register_custom_http_handler("/stats", [&](http::HttpCallback::RequestType request_type,
+                                             std::vector<std::pair<std::string, std::string>> headers, std::string path,
+                                             std::vector<std::pair<std::string, std::string>> args, std::string body,
+                                             std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+    http_send_static_answer(http_generate_main(), std::move(answer_callback));
+  });
   register_custom_http_handler(
-      "/stats",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) { http_send_static_answer(http_generate_main(), std::move(promise)); });
+      "/jsonstats",
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        http_send_static_answer(http_generate_json_stats(), std::move(answer_callback), "application/json");
+      });
   register_custom_http_handler(
       "/request/removekey",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) {
-        if (request->method() != "POST" && request->method() != "post") {
-          http_send_static_answer(wrap_short_answer_to_http("removekey must be a post request"), std::move(promise));
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        if (request_type == http::HttpCallback::RequestType::Post) {
+          http_send_static_answer(http_remove_key(get_from_sorted_list(args, "key")), std::move(answer_callback));
         } else {
-          http_send_static_answer(http_remove_key(get_args["key"]), std::move(promise));
+          http_send_static_answer(404, "not found", std::move(answer_callback));
         }
       });
   register_custom_http_handler(
       "/request/generatekey",
-      [&](std::string url, std::map<std::string, std::string> get_args, std::unique_ptr<ton::http::HttpRequest> request,
-          std::shared_ptr<ton::http::HttpPayload> payload,
-          td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>>
-              promise) {
-        if (request->method() != "POST" && request->method() != "post") {
-          http_send_static_answer(wrap_short_answer_to_http("generatekey must be a post request"), std::move(promise));
+      [&](http::HttpCallback::RequestType request_type, std::vector<std::pair<std::string, std::string>> headers,
+          std::string path, std::vector<std::pair<std::string, std::string>> args, std::string body,
+          std::unique_ptr<http::HttpRequestCallback> answer_callback) {
+        if (request_type == http::HttpCallback::RequestType::Post) {
+          http_send_static_answer(http_generate_key(get_from_sorted_list(args, "type")), std::move(answer_callback));
         } else {
-          http_send_static_answer(http_generate_key(get_args["type"]), std::move(promise));
+          http_send_static_answer(404, "not found", std::move(answer_callback));
         }
       });
 
@@ -304,12 +309,6 @@ void KeyManagerRunner::receive_query(TcpClient::ConnectionId connection_id, td::
       LOG(ERROR) << "received query with unknown magic " << td::format::as_hex(magic);
       promise.set_error(td::Status::Error(ton::ErrorCode::failure, "unknown query magic"));
   }
-}
-
-void KeyManagerRunner::receive_http_request(
-    std::unique_ptr<ton::http::HttpRequest> request, std::shared_ptr<ton::http::HttpPayload> payload,
-    td::Promise<std::pair<std::unique_ptr<ton::http::HttpResponse>, std::shared_ptr<ton::http::HttpPayload>>> promise) {
-  ton::http::answer_error(ton::http::HttpStatusCode::status_bad_request, "bad request", std::move(promise));
 }
 
 void KeyManagerRunner::remove_key(td::Bits256 public_key) {
