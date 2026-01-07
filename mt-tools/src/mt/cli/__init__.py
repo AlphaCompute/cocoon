@@ -68,7 +68,7 @@ Examples:
     p_eval.add_argument('configs', nargs='*', metavar='CONFIG',
                         help='Config file(s) to evaluate (INI format)')
     p_eval.add_argument('--task', type=str, default='translate',
-                        choices=['translate', 'summarize', 'audio_langid'],
+                        choices=['translate', 'summarize', 'audio_langid', 'audio_transcribe'],
                         help='Task to evaluate (default: translate)')
     p_eval.add_argument('--lang', type=str, default='en',
                         help='Language for summarize task (default: en)')
@@ -78,6 +78,10 @@ Examples:
                         help='Comma-separated language codes for audio_langid (e.g., "en,ru,zh")')
     p_eval.add_argument('--audio-model', type=str, default='speechbrain',
                         help='Model for audio_langid: "speechbrain" or "whisper" (default: speechbrain)')
+    p_eval.add_argument('--transcribe-model', type=str, default='openai/whisper-large-v3',
+                        help='Model for audio_transcribe (default: openai/whisper-large-v3)')
+    p_eval.add_argument('--transcribe-language', type=str,
+                        help='Language hint for audio_transcribe (e.g., "en", "ru"). Auto-detected from sample if not set.')
     p_eval.add_argument('--pairs', type=str,
                         help='Language pairs for translate: en-ru,en-zh')
     p_eval.add_argument('--from-csv', type=str,
@@ -144,6 +148,15 @@ Examples:
                          help='Read query from file')
     p_bench.add_argument('--csv', type=str,
                          help='Save results to CSV')
+    # Audio transcription options
+    p_bench.add_argument('--audio-dir', type=str,
+                         help='Directory with audio files for audio_transcribe benchmark')
+    p_bench.add_argument('--langs', type=str,
+                         help='Comma-separated language codes for audio (e.g., "en,ru,zh")')
+    p_bench.add_argument('--transcribe-model', type=str, default='openai/whisper-large-v3',
+                         help='Model for audio_transcribe (default: openai/whisper-large-v3)')
+    p_bench.add_argument('--transcribe-language', type=str,
+                         help='Language hint for audio_transcribe (e.g., "en", "ru")')
     p_bench.set_defaults(func=cmd_benchmark)
     
     # Parse and dispatch

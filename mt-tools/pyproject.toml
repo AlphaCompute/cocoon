@@ -13,14 +13,15 @@ dependencies = [
     "duckdb",
     "bert-score",
     # Audio processing
-    "speechbrain",
+    "speechbrain>=1.0.0",
     "soundfile",
     "scipy",
-    "torchaudio>=2.4",
-    "torch>=2.4",
+    "torchaudio>=2.2,<2.5",
+    "torch>=2.2,<2.5",
     "openai-whisper",
     "transformers",
     "accelerate",
+    "jiwer",  # WER calculation for transcription
 ]
 
 [project.scripts]
