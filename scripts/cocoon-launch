@@ -113,6 +113,8 @@ class Config:
     vsock_cid: int | None = None
     tcp_ports: list[int] = field(default_factory=list)
     no_tee: bool = False
+    guestfwd_ip : str | None = None
+    guestfwd_ports: list[int] = field(default_factory=list)
 
     # Extra
     extra_vars: Dict[str, str] = field(default_factory=dict)
@@ -135,7 +137,7 @@ class Config:
             ('TON configs', ['ton_config_base', 'ton_config']),
             ('Paths', ['image_dir', 'build_dir', 'local_run_dir', 'model_tar_path', 'prepared_spec_dir']),
             ('Model', ['model_commit', 'model_verity_hash']),
-            ('QEMU/hardware', ['gpu', 'persistent', 'ssh_port', 'vsock_cid', 'tcp_ports', 'no_tee']),
+            ('QEMU/hardware', ['gpu', 'persistent', 'ssh_port', 'vsock_cid', 'tcp_ports', 'no_tee', 'guestfwd_ip', 'guestfwd_ports']),
             ('Extra', ['prepare_only', 'print_only', 'skip_build', 'just_build']),
         ]
 
@@ -337,6 +339,9 @@ def load_config_from_file(cli_args) -> Config:
         cfg.tcp_ports = [getint('http_port', 12000)]
         cfg.ssh_port = getint('ssh_port', 12005)
         cfg.vsock_cid = getint('vsock_cid', 6)  # Worker: 6, 16, 26...
+        if cli_args.guestfwd_ip:
+            cfg.guestfwd_ip = cli_args.guestfwd_ip
+            cfg.guestfwd_ports = [11001]
     elif node_type == 'proxy':
         cfg.tcp_ports = [getint('http_port', 11000),
                          getint('worker_rpc_port', 11001),
@@ -615,6 +620,10 @@ def run_qemu(cfg: Config):
         netdev += f',hostfwd=tcp::{cfg.ssh_port + offset}-:22'
     for guest_port in cfg.tcp_ports:
         netdev += f',hostfwd=tcp::{guest_port + offset}-:{guest_port}'
+    if cfg.guestfwd_ip and cfg.guestfwd_ports:
+        for guestfwd_port in cfg.guestfwd_ports:
+            netdev += f',guestfwd=tcp::{guestfwd_port}-tcp:{cfg.guestfwd_ip}:{guestfwd_port}'
+
 
     # Read cmdline
     cmdline_file = Path(cfg.image_dir) / 'image.cmdline'
@@ -901,6 +910,7 @@ def parse_args():
     parser.add_argument('--vsock-cid', type=int)
     parser.add_argument('--tcp', action='append', type=int, default=[])
     parser.add_argument('--no-tee', action='store_true')
+    parser.add_argument('--guestfwd-ip', help='IP address to forward quest connections')
     parser.add_argument('--image-dir', help='Image directory')
     parser.add_argument('--build-dir', help='Build directory (defaults to BUILD_DIR env or cmake-build-default-tee)')
 
