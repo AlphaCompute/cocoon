@@ -1390,7 +1390,6 @@ static td::int64 get_json_value(nlohmann::json &json, const std::vector<std::str
 
 std::string AnswerPostprocessor::add_next_answer_slice(td::Slice event) {
   last_ += event.str();
-  LOG(ERROR) << "last=" << last_;
 
   td::StringBuilder sb;
   std::stringstream ss(last_);
@@ -1460,7 +1459,6 @@ std::string AnswerPostprocessor::add_next_answer_slice(td::Slice event) {
       sb << v.dump() << "\n";
     } catch (...) {
       is_end = true;
-      LOG(ERROR) << "exception";
     }
   }
   last_ = last_.substr(pos);
@@ -1479,6 +1477,10 @@ ton::tl_object_ptr<cocoon_api::tokensUsed> AnswerPostprocessor::usage() {
 
 std::string AnswerPostprocessor::finalize() {
   if (last_.size() > 0) {
+    /* probably just whitespace*/
+    if (last_.size() >= 4) {
+      LOG(ERROR) << "worker request: unprocessed data in answer: bytes=" << last_.size();
+    }
     // do something?
   }
   return "";

@@ -47,9 +47,7 @@ class RootContractConfig {
                                                                       bool is_testnet);
   static td::Result<std::unique_ptr<RootContractConfig>> load_from_tl(const cocoon_api::rootConfig_pseudo &config,
                                                                       bool is_testnet);
-  static td::Result<std::unique_ptr<RootContractConfig>> load_from_tl(const cocoon_api::rootConfig_configV5 &config,
-                                                                      bool is_testnet);
-  static td::Result<std::unique_ptr<RootContractConfig>> load_from_tl(const cocoon_api::rootConfig_configV6 &config,
+  static td::Result<std::unique_ptr<RootContractConfig>> load_from_tl(const cocoon_api::rootConfig_configV7 &config,
                                                                       bool is_testnet);
 
   ton::tl_object_ptr<cocoon_api::rootConfig_Config> serialize() const;
@@ -209,6 +207,10 @@ class RootContractConfig {
   td::Bits256 key_manager_public_key_ = td::Bits256::zero();
   td::Bits256 key_manager_image_hash_ = td::Bits256::zero();
   td::IPAddress key_manager_addr_;
+
+  std::vector<td::Bits256> verified_proxy_keys_;
+  std::vector<td::Bits256> verified_worker_keys_;
+  std::vector<td::Bits256> verified_key_manager_keys_;
 
   td::Ref<vm::Cell> proxy_sc_code_;
   td::Ref<vm::Cell> worker_sc_code_;

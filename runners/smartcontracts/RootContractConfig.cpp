@@ -12,6 +12,7 @@
 #include "td/utils/overloaded.h"
 #include "td/utils/port/IPAddress.h"
 #include "td/utils/filesystem.h"
+#include "tl/TlObject.h"
 #include "tl/tl_json.h"
 #include "auto/tl/cocoon_api.h"
 #include "auto/tl/cocoon_api_json.h"
@@ -21,6 +22,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <vector>
 #include "cocoon-tl-utils/parsers.hpp"
 #include "runners/helpers/Ton.h"
 
@@ -105,7 +107,7 @@ td::Result<std::unique_ptr<RootContractConfig>> RootContractConfig::load_from_st
       return td::Status::Error("cannot fetch struct_version");
     }
 
-    if (struct_version > 4) {
+    if (struct_version > 5) {
       return td::Status::Error(PSTRING() << "unexpected params struct version: " << struct_version);
     }
 
@@ -369,6 +371,60 @@ td::Result<std::unique_ptr<RootContractConfig>> RootContractConfig::load_from_st
       }
     }
 
+    std::vector<td::Bits256> verified_proxy_keys;
+    std::vector<td::Bits256> verified_worker_keys;
+    std::vector<td::Bits256> verified_key_manager_keys;
+
+    if (struct_version >= 5) {
+      auto verified_keys_cell = cell_slice.fetch_ref();
+      vm::CellSlice cs{vm::NoVm{}, verified_keys_cell};
+      if (!cs.fetch_bool_to(exist_bit)) {
+        return td::Status::Error("failed to get dict exist bit");
+      }
+      if (exist_bit) {
+        vm::Dictionary dict(cs.fetch_ref(), 256);
+        if (!dict.check_for_each([&](td::Ref<vm::CellSlice> value, td::ConstBitPtr key, int key_len) {
+              CHECK(key_len == 256);
+              td::Bits256 public_key(key);
+              verified_proxy_keys.push_back(public_key);
+              return true;
+            })) {
+          return td::Status::Error("failed to iterate proxy verified keys dict");
+        }
+      }
+      if (!cs.fetch_bool_to(exist_bit)) {
+        return td::Status::Error("failed to get dict exist bit");
+      }
+      if (exist_bit) {
+        vm::Dictionary dict(cs.fetch_ref(), 256);
+        if (!dict.check_for_each([&](td::Ref<vm::CellSlice> value, td::ConstBitPtr key, int key_len) {
+              CHECK(key_len == 256);
+              td::Bits256 public_key(key);
+              verified_worker_keys.push_back(public_key);
+              return true;
+            })) {
+          return td::Status::Error("failed to iterate worker verified keys dict");
+        }
+      }
+      if (!cs.fetch_bool_to(exist_bit)) {
+        return td::Status::Error("failed to get dict exist bit");
+      }
+      if (exist_bit) {
+        vm::Dictionary dict(cs.fetch_ref(), 256);
+        if (!dict.check_for_each([&](td::Ref<vm::CellSlice> value, td::ConstBitPtr key, int key_len) {
+              CHECK(key_len == 256);
+              td::Bits256 public_key(key);
+              verified_key_manager_keys.push_back(public_key);
+              return true;
+            })) {
+          return td::Status::Error("failed to iterate key manager verified keys dict");
+        }
+      }
+      if (!cs.empty_ext()) {
+        return td::Status::Error("extra data in verified keys cell");
+      }
+    }
+
     if (!cell_slice.empty_ext()) {
       return td::Status::Error("extra data in root contract");
     }
@@ -410,6 +466,9 @@ td::Result<std::unique_ptr<RootContractConfig>> RootContractConfig::load_from_st
     config->key_manager_public_key_ = key_manager_public_key;
     config->key_manager_image_hash_ = key_manager_image_hash;
     config->key_manager_addr_ = key_manager_addr;
+    config->verified_proxy_keys_ = std::move(verified_proxy_keys);
+    config->verified_worker_keys_ = std::move(verified_worker_keys);
+    config->verified_key_manager_keys_ = std::move(verified_key_manager_keys);
     //config->proxy_contract_info_;
     //config->worker_contract_info_;
     //config->client_contract_info_;
@@ -514,89 +573,7 @@ td::Result<std::unique_ptr<RootContractConfig>> RootContractConfig::load_from_tl
 }
 
 td::Result<std::unique_ptr<RootContractConfig>> RootContractConfig::load_from_tl(
-    const cocoon_api::rootConfig_configV5 &conf, bool is_testnet) {
-  std::unique_ptr<RootContractConfig> config = std::make_unique<RootContractConfig>();
-
-  if (!rdeserialize(config->owner_, conf.root_owner_address_, is_testnet)) {
-    return td::Status::Error("cannot deserialize root owner address");
-  }
-
-  for (auto &h : conf.proxy_hashes_) {
-    config->accepted_proxy_hashes_.push_back(h);
-  }
-  std::sort(config->accepted_proxy_hashes_.begin(),
-            config->accepted_proxy_hashes_.end());  // should be sorted, but...
-
-  for (auto &p : conf.registered_proxies_) {
-    ProxyInfo w;
-    w.seqno = (td::uint32)p->seqno_;
-    auto addr = td::Slice(p->address_);
-    auto x = addr.find(' ');
-    if (x == td::Slice::npos) {
-      if (!parse_address(addr, w.address_for_workers)) {
-        return td::Status::Error("cannot parse address");
-      }
-      w.address_for_clients = w.address_for_workers;
-    } else {
-      if (!parse_address(addr.copy().truncate(x), w.address_for_workers)) {
-        return td::Status::Error("cannot parse address");
-      }
-      if (!parse_address(addr.copy().remove_prefix(x + 1), w.address_for_clients)) {
-        return td::Status::Error("cannot parse address");
-      }
-    }
-    config->proxies_.push_back(std::move(w));
-  }
-
-  config->last_proxy_seqno_ = conf.last_proxy_seqno_;
-
-  for (auto &w : conf.worker_hashes_) {
-    config->workers_.emplace_back(w);
-  }
-  std::sort(config->workers_.begin(), config->workers_.end());
-
-  for (auto &w : conf.model_hashes_) {
-    config->models_.emplace_back(w);
-  }
-  std::sort(config->models_.begin(), config->models_.end());
-
-  config->version_ = conf.version_;
-
-  config->struct_version_ = (td::uint8)conf.struct_version_;
-  config->params_version_ = conf.params_version_;
-  config->unique_id_ = conf.unique_id_;
-  config->is_test_ = (bool)conf.is_test_;
-  config->price_per_token_ = conf.price_per_token_;
-  config->worker_fee_per_token_ = conf.worker_fee_per_token_;
-  config->prompt_tokens_price_multiplier_ = conf.prompt_tokens_price_multiplier_;
-  config->cached_tokens_price_multiplier_ = conf.cached_tokens_price_multiplier_;
-  config->completion_tokens_price_multiplier_ = conf.completion_tokens_price_multiplier_;
-  config->reasoning_tokens_price_multiplier_ = conf.reasoning_tokens_price_multiplier_;
-  config->proxy_delay_before_close_ = conf.proxy_delay_before_close_;
-  config->client_delay_before_close_ = conf.client_delay_before_close_;
-  config->min_proxy_stake_ = conf.min_proxy_stake_;
-  config->min_client_stake_ = conf.min_client_stake_;
-  config->key_manager_public_key_ = td::Bits256::zero();
-  config->key_manager_image_hash_ = td::Bits256::zero();
-  config->key_manager_addr_ = td::IPAddress();
-
-  auto deserialize_boc = [](td::Slice data) -> td::Result<td::Ref<vm::Cell>> {
-    if (data.size() == 0) {
-      return vm::CellBuilder().finalize_novm();
-    }
-    TRY_RESULT(s, td::hex_decode(data));
-    return vm::std_boc_deserialize(s);
-  };
-
-  TRY_RESULT_ASSIGN(config->proxy_sc_code_, deserialize_boc(conf.proxy_sc_code_));
-  TRY_RESULT_ASSIGN(config->worker_sc_code_, deserialize_boc(conf.worker_sc_code_));
-  TRY_RESULT_ASSIGN(config->client_sc_code_, deserialize_boc(conf.client_sc_code_));
-
-  return config;
-}
-
-td::Result<std::unique_ptr<RootContractConfig>> RootContractConfig::load_from_tl(
-    const cocoon_api::rootConfig_configV6 &conf, bool is_testnet) {
+    const cocoon_api::rootConfig_configV7 &conf, bool is_testnet) {
   std::unique_ptr<RootContractConfig> config = std::make_unique<RootContractConfig>();
 
   if (!rdeserialize(config->owner_, conf.root_owner_address_, is_testnet)) {
@@ -674,6 +651,10 @@ td::Result<std::unique_ptr<RootContractConfig>> RootContractConfig::load_from_tl
     }
   }
 
+  config->verified_proxy_keys_ = conf.verified_proxy_keys_;
+  config->verified_worker_keys_ = conf.verified_worker_keys_;
+  config->verified_key_manager_keys_ = conf.verified_proxy_keys_;
+
   auto deserialize_boc = [](td::Slice data) -> td::Result<td::Ref<vm::Cell>> {
     if (data.size() == 0) {
       return vm::CellBuilder().finalize_novm();
@@ -721,12 +702,24 @@ ton::tl_object_ptr<cocoon_api::rootConfig_Config> RootContractConfig::serialize(
   auto workers = workers_;
   auto models = models_;
 
-  return cocoon::create_tl_object<cocoon_api::rootConfig_configV5>(
+  std::vector<ton::tl_object_ptr<cocoon_api::rootConfig_registeredPublicKey>> pub_keys;
+  for (auto &k : public_keys_) {
+    pub_keys.push_back(ton::create_tl_object<cocoon_api::rootConfig_registeredPublicKey>(k.first, k.second.key_type,
+                                                                                         k.second.expire_at));
+  }
+
+  auto verified_proxy_keys = verified_proxy_keys_;
+  auto verified_worker_keys = verified_worker_keys_;
+  auto verified_key_manager_keys = verified_key_manager_keys_;
+
+  return cocoon::create_tl_object<cocoon_api::rootConfig_configV7>(
       owner_.rserialize(true), std::move(accepted_proxy_hashes), std::move(proxies), last_proxy_seqno_,
       std::move(workers), std::move(models), version_, struct_version_, params_version_, unique_id_, is_test_ ? 1 : 0,
       (int)price_per_token_, (int)worker_fee_per_token_, prompt_tokens_price_multiplier_,
       cached_tokens_price_multiplier_, completion_tokens_price_multiplier_, reasoning_tokens_price_multiplier_,
-      proxy_delay_before_close_, client_delay_before_close_, min_proxy_stake_, min_client_stake_,
+      proxy_delay_before_close_, client_delay_before_close_, min_proxy_stake_, min_client_stake_, std::move(pub_keys),
+      key_manager_public_key_, key_manager_image_hash_, PSTRING() << key_manager_addr_, std::move(verified_proxy_keys),
+      std::move(verified_worker_keys), std::move(verified_key_manager_keys),
       td::hex_encode(vm::std_boc_serialize(proxy_sc_code_).move_as_ok().as_slice()),
       td::hex_encode(vm::std_boc_serialize(worker_sc_code_).move_as_ok().as_slice()),
       td::hex_encode(vm::std_boc_serialize(client_sc_code_).move_as_ok().as_slice()));

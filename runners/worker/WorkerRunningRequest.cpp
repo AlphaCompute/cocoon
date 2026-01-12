@@ -257,13 +257,11 @@ void WorkerRunningRequest::send_payload_part(std::string orig_payload_part, bool
   CHECK(sent_answer_);
   CHECK(!completed_);
 
-  LOG(ERROR) << "orig_size=" << orig_payload_part.size() << " " << orig_payload_part;
   auto payload_to_send = postprocessor_->add_next_answer_slice(orig_payload_part);
   if (payload_is_completed) {
     payload_to_send = payload_to_send + postprocessor_->finalize();
   }
 
-  LOG(ERROR) << "end_size=" << payload_to_send.size();
   if (!payload_to_send.size() && !payload_is_completed) {
     return;
   }

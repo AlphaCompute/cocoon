@@ -116,27 +116,7 @@ rootConfig.pseudo proxy_hashes:(vector int256) worker_hashes:(vector int256) mod
                     worker_sc_code:string
                     client_sc_code:string
                     root_owner_address:string = rootConfig.Config;
-rootConfig.configV5 root_owner_address:string proxy_hashes:(vector int256) registered_proxies:(vector rootConfig.registeredProxy)
-                    last_proxy_seqno:int worker_hashes:(vector int256) model_hashes:(vector int256) version:int 
-                    struct_version:int
-                    params_version:int
-                    unique_id:int
-                    is_test:int
-                    price_per_token:long
-                    worker_fee_per_token:long
-                    prompt_tokens_price_multiplier:int
-                    cached_tokens_price_multiplier:int
-                    completion_tokens_price_multiplier:int
-                    reasoning_tokens_price_multiplier:int
-                    proxy_delay_before_close:int
-                    client_delay_before_close:int
-                    min_proxy_stake:long
-                    min_client_stake:long
-                    proxy_sc_code:string
-                    worker_sc_code:string
-                    client_sc_code:string
-                    = rootConfig.Config;
-rootConfig.configV6 root_owner_address:string proxy_hashes:(vector int256) registered_proxies:(vector rootConfig.registeredProxy)
+rootConfig.configV7 root_owner_address:string proxy_hashes:(vector int256) registered_proxies:(vector rootConfig.registeredProxy)
                     last_proxy_seqno:int worker_hashes:(vector int256) model_hashes:(vector int256) version:int 
                     struct_version:int
                     params_version:int
@@ -156,6 +136,9 @@ rootConfig.configV6 root_owner_address:string proxy_hashes:(vector int256) regis
                     key_manager_public_key:int256
                     key_manager_image_hash:int256
                     key_manager_address:string
+                    verified_proxy_keys:(vector int256)
+                    verified_worker_keys:(vector int256)
+                    verified_key_manager_keys:(vector int256)
                     proxy_sc_code:string
                     worker_sc_code:string
                     client_sc_code:string
