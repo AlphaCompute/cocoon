@@ -25,8 +25,8 @@ td::Result<PolicyConfig> parse_policy_config(td::JsonObject &obj) {
   if (r_image_id_array.is_ok() && r_image_id_array.ok().type() == td::JsonValue::Type::Array) {
     for (const auto &item : r_image_id_array.ok().get_array()) {
       if (item.type() == td::JsonValue::Type::String) {
-        TRY_RESULT(image_id, cocoon::parse_hex_uint<td::UInt128>(item.get_string()));
-        config.allowed_image_id.push_back(image_id);
+        TRY_RESULT(image_hash, cocoon::parse_hex_uint<td::UInt256>(item.get_string()));
+        config.allowed_image_hashes.push_back(image_hash);
       }
     }
   }
@@ -41,11 +41,11 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const PolicyConfig &config)
     sb << "  allowed_measurement: " << config.allowed_measurement << "\n";
   }
 
-  if (!config.allowed_image_id.empty()) {
-    sb << "  allowed_image_id: " << config.allowed_image_id << "\n";
+  if (!config.allowed_image_hashes.empty()) {
+    sb << "  allowed_image_hashes: " << config.allowed_image_hashes << "\n";
   }
 
-  if (config.allowed_measurement.empty() && config.allowed_image_id.empty()) {
+  if (config.allowed_measurement.empty() && config.allowed_image_hashes.empty()) {
     sb << "  (default - no restrictions)\n";
   }
 

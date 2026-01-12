@@ -45,9 +45,13 @@ set(COCOON_SOURCE
         cocoon/sev/PKI.h
         cocoon/sev/PolicyConfig.cpp
         cocoon/sev/PolicyConfig.h
+        cocoon/sev/RATLS.cpp
+        cocoon/sev/RATLS.h
         cocoon/sev/SEVHashes.cpp
         cocoon/sev/SEVHashes.h
         cocoon/sev/SHA384.h
+        cocoon/sev/Tee.cpp
+        cocoon/sev/Tee.h
         cocoon/sev/UUID.cpp
         cocoon/sev/UUID.h
         cocoon/sev/VMSA.cpp

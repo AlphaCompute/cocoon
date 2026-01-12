@@ -11,7 +11,7 @@ namespace sev {
 
 struct PolicyConfig {
   std::vector<td::UInt384> allowed_measurement;
-  std::vector<td::UInt128> allowed_image_id;
+  std::vector<td::UInt256> allowed_image_hashes;
 };
 
 td::Result<PolicyConfig> parse_policy_config(td::JsonObject &obj);
