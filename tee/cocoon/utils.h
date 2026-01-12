@@ -1,5 +1,6 @@
 #pragma once
-#include "tee/cocoon/tdx/tdx.h"
+#include "tee/cocoon/RATLS.h"
+#include "tee/cocoon/Tee.h"
 #include "td/actor/actor.h"
 #include "td/utils/as.h"
 #include "td/utils/buffer.h"
@@ -57,12 +58,12 @@ td::Result<TT> cut(td::Slice& s) {
   s.remove_prefix(sizeof(T));
   return result;
 }
-struct AttestedPeerInfo;
+
 // Create a server-side SSL stream using provided cert/key and policy verification
-td::Result<td::SslStream> create_server_ssl_stream(tdx::CertAndKey cert_and_key, tdx::PolicyRef policy);
+td::Result<td::SslStream> create_server_ssl_stream(TeeCertAndKey cert_and_key, RATLSPolicyRef policy);
 
 // Create a client-side SSL stream for the given host using provided cert/key and policy verification
-td::Result<td::SslStream> create_client_ssl_stream(td::CSlice host, tdx::CertAndKey cert_and_key, tdx::PolicyRef policy,
+td::Result<td::SslStream> create_client_ssl_stream(td::CSlice host, TeeCertAndKey cert_and_key, RATLSPolicyRef policy,
                                                    bool enable_sni = true);
 
 // Re-export framed I/O functions from td namespace for backward compatibility
@@ -119,61 +120,16 @@ td::actor::StartedTask<td::BufferedFd<td::SocketFd>> socks5(td::SocketFd socket_
                                                             td::string username, td::string password);
 td::actor::StartedTask<td::Unit> proxy(td::Slice name, td::Pipe left, td::Pipe right);
 
-td::actor::Task<std::pair<td::Pipe, AttestedPeerInfo>> wrap_tls_client(td::Slice name, td::Pipe pipe,
-                                                                       tdx::CertAndKey cert_and_key,
-                                                                       tdx::PolicyRef policy,
-                                                                       const td::IPAddress &source,
-                                                                       const td::IPAddress &destination);
-td::actor::Task<std::pair<td::Pipe, AttestedPeerInfo>> wrap_tls_server(td::Slice name, td::Pipe pipe,
-                                                                       tdx::CertAndKey cert_and_key,
-                                                                       tdx::PolicyRef policy,
-                                                                       const td::IPAddress &source,
-                                                                       const td::IPAddress &destination);
-
-/**
- * @brief Attested peer information for serialization
- * 
- * Contains comprehensive information about the attested peer including
- * source/destination addresses, attestation data, and user claims
- */
-struct AttestedPeerInfo {
-  tdx::AttestationData attestation_data;
-  tdx::UserClaims user_claims;
-  std::string source_ip;       // Source IP address as string
-  int source_port;             // Source port
-  std::string destination_ip;  // Destination IP address as string
-  int destination_port;        // Destination port
-
-  template <class StorerT>
-  void store(StorerT &storer) const {
-    using td::store;
-    store(attestation_data, storer);
-    store(user_claims, storer);
-    store(source_ip, storer);
-    store(source_port, storer);
-    store(destination_ip, storer);
-    store(destination_port, storer);
-  }
-
-  template <class ParserT>
-  void parse(ParserT &parser) {
-    using td::parse;
-    parse(attestation_data, parser);
-    parse(user_claims, parser);
-    parse(source_ip, parser);
-    parse(source_port, parser);
-    parse(destination_ip, parser);
-    parse(destination_port, parser);
-  }
-};
-
-td::StringBuilder &operator<<(td::StringBuilder &sb, const AttestedPeerInfo &info);
-
-/**
- * @brief Create attested peer info from basic attestation data, user claims, and addresses
- */
-AttestedPeerInfo make_attested_peer_info(const tdx::AttestationData &attestation, const tdx::UserClaims &user_claims,
-                                         const td::IPAddress &source, const td::IPAddress &destination);
+td::actor::Task<std::pair<td::Pipe, RATLSAttestedPeerInfo>> wrap_tls_client(td::Slice name, td::Pipe pipe,
+                                                                            TeeCertAndKey cert_and_key,
+                                                                            RATLSPolicyRef policy,
+                                                                            const td::IPAddress &source,
+                                                                            const td::IPAddress &destination);
+td::actor::Task<std::pair<td::Pipe, RATLSAttestedPeerInfo>> wrap_tls_server(td::Slice name, td::Pipe pipe,
+                                                                            TeeCertAndKey cert_and_key,
+                                                                            RATLSPolicyRef policy,
+                                                                            const td::IPAddress &source,
+                                                                            const td::IPAddress &destination);
 
 struct ProxyState {
   std::string state_ = "Connecting";
@@ -203,15 +159,10 @@ struct ProxyState {
     return desc;
   }
 
-  void set_attestation(const tdx::AttestationData &info) {
-    if (info.is_empty()) {
-      attestation_ = "";
-      attestation_type_ = "None";
-    } else {
-      auto hash = info.image_hash();
-      attestation_ = td::hex_encode(hash.as_slice()).substr(0, 8) + "..";
-      attestation_type_ = info.short_description();
-    }
+  void set_attestation(const RATLSAttestationReport &report) {
+    auto hash = report.image_hash();
+    attestation_ = td::hex_encode(hash.as_slice()).substr(0, 8) + "..";
+    attestation_type_ = report.short_description().str();
   }
 
   td::Status init_source(const td::SocketFd &socket) {

@@ -33,6 +33,9 @@ set(COCOON_SOURCE
         cocoon/tdx/PolicyConfig.cpp
         cocoon/tdx/PolicyConfig.h
         cocoon/tdx/RATLS.h
+        cocoon/tdx/RATLS.cpp
+        cocoon/tdx/Tee.h
+        cocoon/tdx/Tee.cpp
         cocoon/sev/ABI.cpp
         cocoon/sev/ABI.h
         cocoon/sev/GuestCTX.cpp

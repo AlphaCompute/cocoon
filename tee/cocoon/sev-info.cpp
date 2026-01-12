@@ -15,10 +15,10 @@
 int main(int argc, char **argv) {
   SET_VERBOSITY_LEVEL(VERBOSITY_NAME(DEBUG));
 
-  sev::TrustChainManager manager;
   sev::VCEKCertificate cert;
 
   td::OptionParser option_parser;
+  std::unordered_map<sev::ProductName, sev::TrustChain> trust_chains;
 
   option_parser.add_checked_option(0, "print-this-cpu-product-name", "Print ProductName from this CPU", []() {
     TRY_RESULT(product_name, sev::product_name_from_this_cpu());
@@ -89,9 +89,10 @@ int main(int argc, char **argv) {
   option_parser.add_checked_option('p', "product-trust-chain", "product and trust chain path prefix",
                                    [&](td::Slice product_and_path_prefix) {
                                      TRY_RESULT(chain, sev::TrustChain::parse(product_and_path_prefix));
-                                     LOG(INFO) << "TrustChain for " << chain.product_name() << " loaded";
+                                     const auto product_name = chain.product_name();
+                                     trust_chains.emplace(product_name, std::move(chain));
 
-                                     manager.add(std::move(chain));
+                                     LOG(INFO) << "TrustChain for " << product_name << " loaded";
 
                                      return td::Status::OK();
                                    });
@@ -170,6 +171,9 @@ int main(int argc, char **argv) {
     TRY_RESULT(product_name_and_stepping, cert.productName());
     TRY_RESULT(product_name, sev::product_name_from_name_and_stepping(product_name_and_stepping));
 
+    sev::TrustChainManager manager(
+        td::SharedValue<std::shared_ptr<std::unordered_map<sev::ProductName, sev::TrustChain>>>(
+            std::make_shared<std::unordered_map<sev::ProductName, sev::TrustChain>>(std::move(trust_chains))));
     TRY_STATUS(manager.verify_cert(product_name, cert.native_handle()));
     LOG(INFO) << "VCEK successfully verified";
 

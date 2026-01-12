@@ -35,6 +35,9 @@
 #include "TonlibWrapper.h"
 #include "helpers/Ton.h"
 #include "helpers/SimpleJsonSerializer.hpp"
+#include "tee/cocoon/RATLS.h"
+#include "tee/cocoon/sev/Tee.h"
+#include "tee/cocoon/tdx/Tee.h"
 
 #include <algorithm>
 #include <csignal>
@@ -823,6 +826,9 @@ class BaseRunner : public td::actor::Actor {
   bool is_testnet_{true};
   bool ton_disabled_{false};
   bool fake_tee_{false};
+  tdx::TeeConfig tdx_tee_config_{};
+  sev::TeeConfig sev_tee_config_{};
+  RATLSInterface::Config ratls_config_{};
   std::string ton_pseudo_config_;
   std::string http_access_hash_;
 

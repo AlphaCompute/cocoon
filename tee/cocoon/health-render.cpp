@@ -161,8 +161,7 @@ std::string get_status() {
   out << "Image Hash: " << image_hash << "\n\n";
 
   // Try to generate TDX report and extract all attestation data
-  auto tdx_interface = tdx::TdxInterface::create();
-  auto report_result = tdx_interface->make_report(td::UInt512());
+  auto report_result = tdx::tdx_make_report(td::UInt512());
 
   if (report_result.is_error()) {
     out << "Error generating TDX report: " << (PSTRING() << report_result.error()) << "\n";
@@ -172,17 +171,17 @@ std::string get_status() {
       out << "RTMR" << i << ": " << read_rtmr(i) << "\n";
     }
   } else {
-    auto data_result = tdx_interface->get_data(report_result.ok());
+    auto data_result = tdx::tdx_parse_report(report_result.ok());
 
     if (data_result.is_error()) {
       out << "Error parsing TDX report: " << (PSTRING() << data_result.error()) << "\n";
-    } else if (data_result.ok().is_tdx()) {
+    } else {
       // Use existing operator<< to print all TDX data
       out << "Attestation Data:\n";
       out << (PSTRING() << data_result.ok());
 
       // Verify image hash
-      auto calc_hash = data_result.ok().image_hash();
+      auto calc_hash = tdx::image_hash(data_result.ok());
       std::string calculated = td::base64_encode(calc_hash.as_slice());
 
       out << "\nVerification:\n";

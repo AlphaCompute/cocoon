@@ -18,7 +18,7 @@
 */
 #pragma once
 
-#include "tee/cocoon/tdx/tdx.h"
+#include "tee/cocoon/RATLS.h"
 #include "common/bitstring.h"
 #include "td/actor/PromiseFuture.h"
 #include "td/actor/actor.h"
@@ -144,13 +144,13 @@ class TcpConnection : public td::actor::Actor, public td::ObserverBase {
   void got_fd(td::Result<td::BufferedFd<td::SocketFd>> fdR);
 
   void tls_solved_pow(td::SocketPipe pipe);
-  void tls_created_pipe(td::Pipe pipe, tdx::AttestationData attestation);
+  void tls_created_pipe(td::Pipe pipe, const RATLSAttestationReport &attestation);
 
   void socks5_connected(td::BufferedFd<td::SocketFd> fd);
 
-  void process_attestation(tdx::AttestationData attestation) {
+  void process_attestation(const RATLSAttestationReport &attestation_report) {
     received_attestation_ = true;
-    remote_app_hash_.as_slice().copy_from(attestation.image_hash().as_slice());
+    remote_app_hash_.as_slice().copy_from(attestation_report.image_hash().as_slice());
     verified_by_ = td::Bits256::zero();
   }
 
