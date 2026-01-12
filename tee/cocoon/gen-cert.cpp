@@ -14,8 +14,8 @@ int main(int argc, char **argv) {
 
   std::map<std::string, tdx::TdxInterfaceRef> tdxs;
   tdxs["none"] = nullptr;
-  tdxs["fake_tdx"] = tdx::TdxInterface::create_fake();
-  tdxs["tdx"] = tdx::TdxInterface::create();
+  tdxs["fake_tee"] = tdx::TdxInterface::create_fake();
+  tdxs["tee"] = tdx::TdxInterface::create();
 
   std::string base_name = "test";
   tdx::TdxInterfaceRef tdx;
@@ -25,10 +25,10 @@ int main(int argc, char **argv) {
   std::optional<td::uint32> current_time;
 
   td::OptionParser option_parser;
-  option_parser.add_checked_option('t', "tdx", "tdx mode (none, fake_tdx, tdx)", [&](td::Slice tdx_name) {
+  option_parser.add_checked_option('t', "tee", "tee mode (none, fake_tee, tee)", [&](td::Slice tee_name) {
     auto it = tdxs.find(tdx_name.str());
     if (it == tdxs.end()) {
-      return td::Status::Error("Unknown tdx name");
+      return td::Status::Error("Unknown tee name");
     }
     tdx = it->second;
     return td::Status::OK();
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
   });
 
   option_parser.set_description(
-      "gen-cert: emits <name>_cert.pem, <name>_key.pem; <name>.tdx_report and <name>_image_hash.b64 if --tdx set");
+      "gen-cert: emits <name>_cert.pem, <name>_key.pem; <name>_image_hash.b64 if --tee set");
 
   auto r_args = option_parser.run(argc, argv, -1);
   if (r_args.is_error()) {
@@ -74,14 +74,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto report_path = PSTRING() << base_name << ".tdx_report";
   auto hash_path = PSTRING() << base_name << "_image_hash.b64";
   auto cert_path = PSTRING() << base_name << "_cert.pem";
   auto key_path = PSTRING() << base_name << "_key.pem";
 
   if (tdx) {
     auto report = tdx->make_report(td::UInt512{}).move_as_ok();
-    td::write_file(report_path, report.raw_report).ensure();
 
     // Save TDX image hash (like .tdx_report)
     auto attestation_data = tdx->get_data(report).move_as_ok();

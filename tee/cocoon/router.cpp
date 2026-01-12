@@ -62,9 +62,9 @@ std::map<std::string, tdx::PolicyRef, std::less<>> create_policies_from_config(c
     // Create appropriate TDX interface based on type
     if (policy_config.type == "any") {
       tdx_interface = nullptr;
-    } else if (policy_config.type == "fake_tdx") {
+    } else if (policy_config.type == "fake_tee") {
       tdx_interface = tdx::TdxInterface::create_fake();
-    } else if (policy_config.type == "tdx") {
+    } else if (policy_config.type == "tee") {
       auto base_tdx = tdx::TdxInterface::create();
       // Wrap with caching layer
       tdx_interface = tdx::TdxInterface::add_cache(base_tdx, attestation_cache);
@@ -106,7 +106,7 @@ td::Status parse_policy_spec(td::Slice spec, PolicyConfig &policy_config) {
   policy_config.name = parts[0].str();
   policy_config.type = parts[1].str();
 
-  if (policy_config.type != "any" && policy_config.type != "fake_tdx" && policy_config.type != "tdx") {
+  if (policy_config.type != "any" && policy_config.type != "fake_tee" && policy_config.type != "tee") {
     return td::Status::Error(PSLICE() << "Invalid policy type: " << policy_config.type);
   }
 
@@ -119,7 +119,7 @@ td::Status parse_policy_spec(td::Slice spec, PolicyConfig &policy_config) {
 }
 
 // Helper to parse policy[:image-hash] and create inline policy if needed
-// Handles both user-defined policy names and built-in types (any/tdx/fake_tdx)
+// Handles both user-defined policy names and built-in types (any/tee/fake_tee)
 td::Status parse_policy_and_image(td::Slice policy_spec, PortConfig &port_config,
                                   std::vector<PolicyConfig> &inline_policies) {
   auto policy_parts = td::full_split(policy_spec, ':');
@@ -132,10 +132,10 @@ td::Status parse_policy_and_image(td::Slice policy_spec, PortConfig &port_config
   }
 
   // Determine policy type:
-  // If it's a built-in name (any/tdx/fake_tdx), use it as TYPE
+  // If it's a built-in name (any/tee/fake_tee), use it as TYPE
   // Otherwise, it's a user-defined policy name - error (can't add image hash to named policy inline)
   std::string policy_type;
-  if (policy_name == "any" || policy_name == "tdx" || policy_name == "fake_tdx") {
+  if (policy_name == "any" || policy_name == "tee" || policy_name == "fake_tee") {
     policy_type = policy_name;
   } else {
     return td::Status::Error(PSLICE() << "Cannot specify image hash for user-defined policy '" << policy_name
@@ -219,7 +219,7 @@ td::Status parse_port_spec(td::Slice spec, PortConfig &port_config) {
   // Format: port:type[:policy[:destination]]
   // Examples:
   //   8116:socks5:any
-  //   8117:reverse:tdx:localhost:8118
+  //   8117:reverse:tee:localhost:8118
 
   auto parts = td::full_split(spec, ':');
   if (parts.size() < 2) {
@@ -276,9 +276,9 @@ int main(int argc, char **argv) {
 
   option_parser.add_checked_option('P', "policy",
                                    "Define named policy: name:type[:image-hash]\n"
-                                   "  type: any|fake_tdx|tdx\n"
+                                   "  type: any|fake_tee|tee\n"
                                    "  Examples:\n"
-                                   "    strict:tdx:abc123...\n"
+                                   "    strict:tee:abc123...\n"
                                    "    relaxed:any",
                                    [&](td::Slice spec) {
                                      PolicyConfig policy_config;
@@ -289,7 +289,7 @@ int main(int argc, char **argv) {
 
   option_parser.add_checked_option('S', "socks5",
                                    "SOCKS5 proxy: port@policy[:image-hash]\n"
-                                   "  Example: 8116@tdx:abc123...",
+                                   "  Example: 8116@tee:abc123...",
                                    [&](td::Slice spec) {
                                      PortConfig port_config;
                                      TRY_STATUS(parse_socks5_spec(spec, port_config, args.cli_policies));
@@ -299,7 +299,7 @@ int main(int argc, char **argv) {
 
   option_parser.add_checked_option('F', "fwd",
                                    "Forward proxy: port:host:port@policy[:image-hash]\n"
-                                   "  Example: 8117:backend.com:443@tdx:abc123...",
+                                   "  Example: 8117:backend.com:443@tee:abc123...",
                                    [&](td::Slice spec) {
                                      PortConfig port_config;
                                      TRY_STATUS(parse_forward_spec(spec, port_config, args.cli_policies));
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
 
   option_parser.add_checked_option('R', "rev",
                                    "Reverse proxy: port:host:port@policy[:image-hash]\n"
-                                   "  Example: 8118:localhost:8080@tdx:abc123...",
+                                   "  Example: 8118:localhost:8080@tee:abc123...",
                                    [&](td::Slice spec) {
                                      PortConfig port_config;
                                      TRY_STATUS(parse_reverse_spec(spec, port_config, args.cli_policies));
@@ -407,11 +407,11 @@ int main(int argc, char **argv) {
     config = r_config.move_as_ok();
   }
   config.policies.emplace_back(
-      PolicyConfig{.name = "tdx", .type = "tdx", .description = "default tdx", .ratls_policy = {}});
+      PolicyConfig{.name = "tee", .type = "tee", .description = "default tee", .ratls_policy = {}});
   config.policies.emplace_back(
       PolicyConfig{.name = "any", .type = "any", .description = "accept any", .ratls_policy = {}});
   config.policies.emplace_back(
-      PolicyConfig{.name = "fake_tdx", .type = "fake_tdx", .description = "fake tdx for testing", .ratls_policy = {}});
+      PolicyConfig{.name = "fake_tee", .type = "fake_tee", .description = "fake tee for testing", .ratls_policy = {}});
 
   // Merge CLI policies with config policies
   if (!args.cli_policies.empty()) {
@@ -421,7 +421,7 @@ int main(int argc, char **argv) {
   // Apply global collateral root hashes to all policies (if specified)
   if (!args.global_collateral_root_hashes.empty()) {
     for (auto &policy_config : config.policies) {
-      if (policy_config.type != "tdx") {
+      if (policy_config.type != "tee") {
         continue;
       }
       policy_config.ratls_policy.tdx_config.allowed_collateral_root_hashes.insert(

@@ -65,10 +65,10 @@ void KeyManagerRunner::load_config(td::Promise<td::Unit> promise) {
         td::Ed25519::PublicKey::from_slice(public_key_.as_slice()).move_as_ok());
 
     if (conf.check_hashes_ || !conf.is_test_) {
-      set_fake_tdx(false);
+      set_fake_tee(false);
       enable_check_hashes();
     } else {
-      set_fake_tdx(true);
+      set_fake_tee(true);
       add_static_private_key();
     }
     set_http_access_hash(conf.http_access_hash_);

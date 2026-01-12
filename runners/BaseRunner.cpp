@@ -367,9 +367,9 @@ void BaseRunner::initialize_rpc_server(td::Promise<td::Unit> promise) {
     td::actor::send_closure(client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_key_manager(),
                             std::make_shared<TcpConnectionType>(TcpConnectionSocks5(connection_to_proxy_via_)));
   } else {
-    LOG(INFO) << "using " << (fake_tdx_ ? "fake" : "real") << " tdx-tls connection";
+    LOG(INFO) << "using " << (fake_tee_ ? "fake" : "real") << " tdx-tls connection";
     auto cert_and_key = tdx::generate_cert_and_key(nullptr);
-    auto tdx_interface = fake_tdx_ ? tdx::TdxInterface::create_fake() : tdx::TdxInterface::create();
+    auto tdx_interface = fake_tee_ ? tdx::TdxInterface::create_fake() : tdx::TdxInterface::create();
     tdx::PolicyConfig conf{};  // allow all
     auto policy = tdx::Policy::make(tdx_interface, conf);
     td::actor::send_closure(client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_proxy(),

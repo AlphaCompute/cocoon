@@ -197,18 +197,18 @@ std::string generate_example_config() {
       "description": "Allow any connection without TEE validation"
     },
     {
-      "name": "fake_tdx",
-      "type": "fake_tdx",
+      "name": "fake_tee",
+      "type": "fake_tee",
       "description": "Use fake TEE for testing"
     },
     {
-      "name": "tdx",
-      "type": "tdx",
+      "name": "tee",
+      "type": "tee",
       "description": "Use real TEE validation"
     },
     {
-      "name": "strict_tdx",
-      "type": "tdx",
+      "name": "strict_tee",
+      "type": "tee",
       "description": "TEE policy with advanced validation settings",
       "ratls_policy": {
         "tdx_config": {
@@ -254,7 +254,7 @@ std::string generate_example_config() {
     {
       "port": 8117,
       "type": "reverse",
-      "policy_name": "tdx",
+      "policy_name": "tee",
       "destination_host": "localhost",
       "destination_port": 8118,
       "serialize_info": true
@@ -262,7 +262,7 @@ std::string generate_example_config() {
     {
       "port": 8118,
       "type": "reverse",
-      "policy_name": "fake_tdx",
+      "policy_name": "fake_tee",
       "destination_host": "localhost",
       "destination_port": 8119
     }
@@ -321,7 +321,7 @@ td::Status validate_proxy_config(const ProxyConfig &config) {
     if (policy.type.empty()) {
       return td::Status::Error(PSLICE() << "Policy type cannot be empty for policy: " << policy.name);
     }
-    if (policy.type != "any" && policy.type != "fake_tdx" && policy.type != "tdx") {
+    if (policy.type != "any" && policy.type != "fake_tee" && policy.type != "tee") {
       return td::Status::Error(PSLICE() << "Invalid policy type: " << policy.type << " for policy: " << policy.name);
     }
     defined_policies.insert(policy.name);
@@ -329,8 +329,8 @@ td::Status validate_proxy_config(const ProxyConfig &config) {
 
   // Add default policies
   defined_policies.insert("any");
-  defined_policies.insert("fake_tdx");
-  defined_policies.insert("tdx");
+  defined_policies.insert("fake_tee");
+  defined_policies.insert("tee");
 
   for (const auto &port_config : config.ports) {
     if (!defined_policies.count(port_config.policy_name)) {

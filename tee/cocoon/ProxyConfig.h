@@ -14,7 +14,7 @@ namespace cocoon {
  */
 struct PolicyConfig {
   std::string name;
-  std::string type;  // "any", "fake_tdx", "tdx"
+  std::string type;  // "any", "fake_tee", "tee"
   std::string description;
   RATLSPolicyConfig ratls_policy;
 };
