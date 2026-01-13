@@ -64,6 +64,9 @@ class MultipartParser {
     }
 
     auto v = td::Slice(at, length);
+    v = trim(v);
+
+    self->descr_ = v.str();
 
     auto v_vec = td::full_split(v, ';');
     for (auto el : v_vec) {
@@ -88,7 +91,7 @@ class MultipartParser {
     if (self->name_ == "") {
       return 0;
     }
-    self->fields_[self->name_] = std::string(at, length);
+    self->fields_[self->name_] = MultipartFormDataValue::create(self->descr_, std::string(at, length));
     self->name_ = "";
     return 0;
   }
@@ -109,7 +112,7 @@ class MultipartParser {
     parser_ = nullptr;
   }
 
-  td::Result<std::map<std::string, std::string>> parse(td::Slice body) {
+  td::Result<MultipartFormDataMap> parse(td::Slice body) {
     auto v = multipart_parser_execute(parser_, body.data(), body.size());
     if (!v) {
       return td::Status::Error(ton::ErrorCode::protoviolation, "cannot parse form multipart data");
@@ -122,7 +125,8 @@ class MultipartParser {
   multipart_parser_settings callbacks_{};
   bool process_header_{false};
   std::string name_;
-  std::map<std::string, std::string> fields_;
+  std::string descr_;
+  MultipartFormDataMap fields_;
 };
 
 static td::Result<td::Slice> get_multipart_boundary(td::Slice content_type) {
@@ -153,7 +157,7 @@ static td::Result<td::Slice> get_multipart_boundary(td::Slice content_type) {
   return boundary;
 }
 
-static td::Result<std::map<std::string, std::string>> parse_multipart_form(td::Slice content_type, td::Slice body) {
+static td::Result<MultipartFormDataMap> parse_multipart_form(td::Slice content_type, td::Slice body) {
   TRY_RESULT(boundary, get_multipart_boundary(content_type));
 
   std::string delim = PSTRING() << "--" << boundary;
@@ -163,15 +167,14 @@ static td::Result<std::map<std::string, std::string>> parse_multipart_form(td::S
   return p.parse(body);
 }
 
-static td::Result<std::string> store_multipart_form(td::Slice content_type,
-                                                    std::map<std::string, std::string> &fields) {
+static td::Result<std::string> store_multipart_form(td::Slice content_type, MultipartFormDataMap &fields) {
   TRY_RESULT(boundary, get_multipart_boundary(content_type));
   td::StringBuilder body;
 
   for (const auto &[key, value] : fields) {
     body << "--" << boundary << "\r\n";
-    body << "Content-Disposition: form-data; name=\"" << key << "\"\r\n\r\n";
-    body << value << "\r\n";
+    body << "Content-Disposition: " << value.descr << "\r\n\r\n";
+    body << value.value << "\r\n";
   }
 
   body << "--" << boundary << "--\r\n";
@@ -263,11 +266,11 @@ static td::Status decrypt_all_strings(nlohmann::json &b, td::Slice shared_secret
   return td::Status::OK();
 }
 
-static td::Status decrypt_all_strings(std::map<std::string, std::string> &b, td::Slice shared_secret) {
+static td::Status decrypt_all_strings(MultipartFormDataMap &b, td::Slice shared_secret) {
   for (auto &[key, value] : b) {
     if (should_encrypt_field(key)) {
-      TRY_RESULT(nv, decrypt_string(value, shared_secret));
-      value = nv;
+      TRY_RESULT(nv, decrypt_string(value.value, shared_secret));
+      value.value = nv;
     }
   }
   return td::Status::OK();
@@ -302,15 +305,15 @@ struct CtxLevel {
   enum class Mode { Json, Form, Slice };
   CtxLevel(nlohmann::json *obj, std::string path) : obj(obj), path(std::move(path)), mode(Mode::Json) {
   }
-  CtxLevel(std::map<std::string, std::string> *fields, std::string path)
-      : fields(fields), path(std::move(path)), mode(Mode::Form) {
+  CtxLevel(MultipartFormDataMap *fields, std::string path) : fields(fields), path(std::move(path)), mode(Mode::Form) {
   }
-  CtxLevel(td::Slice field, std::string path) : field(std::move(field)), path(std::move(path)), mode(Mode::Slice) {
+  CtxLevel(MultipartFormDataValue *field, std::string path)
+      : field(std::move(field)), path(std::move(path)), mode(Mode::Slice) {
   }
 
   nlohmann::json *obj{nullptr};
-  std::map<std::string, std::string> *fields{nullptr};
-  td::Slice field;
+  MultipartFormDataMap *fields{nullptr};
+  MultipartFormDataValue *field{nullptr};
   std::string path;
   std::set<std::string> processed_fields;
   Mode mode;
@@ -354,7 +357,7 @@ struct CtxLevel {
     processed_fields.insert(name);
     switch (mode) {
       case Mode::Form: {
-        (*fields)[name] = PSTRING() << std::move(arg);
+        (*fields)[name] = MultipartFormDataValue::create_with_name(name, PSTRING() << std::move(arg));
         return;
       }
       case Mode::Slice: {
@@ -421,7 +424,7 @@ struct CtxLevel {
         if (it == fields->end()) {
           return {};
         } else {
-          return std::make_unique<CtxLevel>(it->second, PSTRING() << path << "." << name);
+          return std::make_unique<CtxLevel>(&it->second, PSTRING() << path << "." << name);
         }
       }
       case Mode::Slice:
@@ -515,7 +518,7 @@ struct CtxLevel {
         return e->get<std::string>();
       }
       case Mode::Slice: {
-        return field.str();
+        return field->value;
       }
       default:
         return td::Status::Error(ton::ErrorCode::protoviolation, PSTRING() << path << " must be a string");
@@ -544,7 +547,7 @@ struct CtxLevel {
       case Mode::Form:
         return td::Status::Error(ton::ErrorCode::protoviolation, PSTRING() << path << " must be an integer");
       case Mode::Slice: {
-        auto R = td::to_integer_safe<td::int64>(field);
+        auto R = td::to_integer_safe<td::int64>(field->value);
         if (R.is_error()) {
           return td::Status::Error(ton::ErrorCode::protoviolation, PSTRING() << path << " must be an integer");
         } else {
@@ -585,7 +588,7 @@ struct CtxLevel {
       case Mode::Form:
         return td::Status::Error(ton::ErrorCode::protoviolation, PSTRING() << path << " must be a boolean");
       case Mode::Slice: {
-        auto R = td::to_integer_safe<td::int64>(field);
+        auto R = td::to_integer_safe<td::int64>(field->value);
         if (R.is_error()) {
           return td::Status::Error(ton::ErrorCode::protoviolation, PSTRING() << path << " must be a boolean");
         } else {
@@ -626,7 +629,7 @@ struct CtxLevel {
       case Mode::Form:
         return td::Status::Error(ton::ErrorCode::protoviolation, PSTRING() << path << " must be a double");
       case Mode::Slice: {
-        return td::to_double(field);
+        return td::to_double(field->value);
       }
       case Mode::Json: {
         auto e = obj;
@@ -651,7 +654,7 @@ struct Ctx {
   Ctx(nlohmann::json *obj) {
     levels.emplace_back(std::make_unique<CtxLevel>(obj, ""));
   }
-  Ctx(std::map<std::string, std::string> *fields) {
+  Ctx(MultipartFormDataMap *fields) {
     levels.emplace_back(std::make_unique<CtxLevel>(fields, ""));
   }
 
@@ -1326,7 +1329,7 @@ td::Result<td::BufferSlice> validate_decrypt_request(std::string url, td::Slice 
   }
 
   nlohmann::json b;
-  std::map<std::string, std::string> fields;
+  MultipartFormDataMap fields;
 
   TRY_RESULT(ctx, [&]() -> td::Result<Ctx> {
     if (is_json) {
@@ -1550,7 +1553,7 @@ td::Status decrypt_json(nlohmann::json &v, const td::Bits256 &private_key, td::B
   return td::Status::OK();
 }
 
-td::Status decrypt_form(std::map<std::string, std::string> &v, const td::Bits256 &private_key, td::Bits256 &public_key,
+td::Status decrypt_form(MultipartFormDataMap &v, const td::Bits256 &private_key, td::Bits256 &public_key,
                         bool check_public_key, bool client_to_worker) {
   bool is_encrypted = v.contains("is_encrypted");
   if (!is_encrypted) {
@@ -1574,9 +1577,9 @@ td::Status decrypt_form(std::map<std::string, std::string> &v, const td::Bits256
     }
   }
 
-  TRY_RESULT(sender_public_key, parse_bits256_from_json(v["sender_public_key"]));
-  TRY_RESULT(receiver_public_key, parse_bits256_from_json(v["receiver_public_key"]));
-  auto encryption_nonce = v["encryption_nonce"];
+  TRY_RESULT(sender_public_key, parse_bits256_from_json(v["sender_public_key"].value));
+  TRY_RESULT(receiver_public_key, parse_bits256_from_json(v["receiver_public_key"].value));
+  auto encryption_nonce = v["encryption_nonce"].value;
 
   if (private_key.is_zero()) {
     return td::Status::Error(ton::ErrorCode::error, "cannot find private key for an encrypted request");
@@ -1682,39 +1685,39 @@ td::Result<std::string> validate_client_form_data_request(td::Slice url, td::Sli
     return td::Status::Error(ton::ErrorCode::protoviolation, "missing field 'model'");
   }
   if (model) {
-    *model = b["model"];
+    *model = b["model"].value;
   }
   if (b.contains("max_completion_tokens")) {
-    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["max_completion_tokens"]));
+    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["max_completion_tokens"].value));
     if (max_tokens) {
       *max_tokens = val;
     }
   } else if (b.contains("max_tokens")) {
-    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["max_tokens"]));
+    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["max_tokens"].value));
     if (max_tokens) {
       *max_tokens = val;
     }
   } else {
     if (max_tokens) {
-      b["max_tokens"] = PSTRING() << *max_tokens;
+      b["max_tokens"] = MultipartFormDataValue::create_with_name("max_tokens", PSTRING() << *max_tokens);
     }
   }
   if (b.contains("max_coefficient")) {
-    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["max_coefficient"]));
+    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["max_coefficient"].value));
     if (max_coefficient) {
       *max_coefficient = val;
     }
     b.erase("max_coefficient");
   }
   if (b.contains("timeout")) {
-    auto val = td::to_double(b["timeout"]);
+    auto val = td::to_double(b["timeout"].value);
     if (timeout) {
       *timeout = val;
     }
     b.erase("timeout");
   }
   if (b.contains("enable_debug")) {
-    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["enable_debug"]));
+    TRY_RESULT(val, td::to_integer_safe<td::uint32>(b["enable_debug"].value));
     if (enable_debug) {
       *enable_debug = val;
     }
@@ -1722,13 +1725,13 @@ td::Result<std::string> validate_client_form_data_request(td::Slice url, td::Sli
   }
   if (b.contains("request_guid")) {
     if (request_guid) {
-      *request_guid = td::sha256_bits256(b["request_guid"]);
+      *request_guid = td::sha256_bits256(b["request_guid"].value);
     }
     b.erase("request_guid");
   }
   if (b.contains("receiver_public_key")) {
     if (receiver_public_key) {
-      TRY_RESULT_ASSIGN(*receiver_public_key, parse_bits256_from_json(b["receiver_public_key"]));
+      TRY_RESULT_ASSIGN(*receiver_public_key, parse_bits256_from_json(b["receiver_public_key"].value));
     }
   }
 

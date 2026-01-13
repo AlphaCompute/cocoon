@@ -9,14 +9,33 @@
 
 namespace cocoon {
 
+struct MultipartFormDataValue {
+  std::string descr;
+  std::string value;
+
+  MultipartFormDataValue() = default;
+  static MultipartFormDataValue create(std::string descr, std::string value) {
+    return MultipartFormDataValue(std::move(descr), std::move(value));
+  }
+  static MultipartFormDataValue create_with_name(std::string name, std::string value) {
+    return MultipartFormDataValue(PSTRING() << "form-data; name=\"" << name << "\"", std::move(value));
+  }
+
+ private:
+  MultipartFormDataValue(std::string descr, std::string value) : descr(std::move(descr)), value(std::move(value)) {
+  }
+};
+
+using MultipartFormDataMap = std::map<std::string, MultipartFormDataValue>;
+
 td::Result<td::Bits256> parse_bits256_from_json(td::Slice key);
 
 void encrypt_json(nlohmann::json &value, const td::Bits256 &private_key, const td::Bits256 &public_key,
                   bool client_to_worker);
 td::Status decrypt_json(nlohmann::json &value, const td::Bits256 &private_key, td::Bits256 &public_key,
                         bool check_public_key, bool client_to_worker);
-td::Status decrypt_form(std::map<std::string, std::string> &value, const td::Bits256 &private_key,
-                        td::Bits256 &public_key, bool check_public_key, bool client_to_worker);
+td::Status decrypt_form(MultipartFormDataMap &value, const td::Bits256 &private_key, td::Bits256 &public_key,
+                        bool check_public_key, bool client_to_worker);
 
 td::Result<td::BufferSlice> validate_decrypt_request(std::string url, td::Slice content_type, td::BufferSlice request,
                                                      std::string *model, td::int64 *max_tokens,
