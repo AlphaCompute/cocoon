@@ -104,12 +104,11 @@ void WorkerRunningRequest::start_request() {
       headers.emplace_back(h->name_, h->value_);
     }
     std::string model;
-    TRY_RESULT(new_payload, validate_decrypt_request(req->url_, content_type, std::move(req->payload_), &model, nullptr,
-                                                     worker_private_key_, &client_public_key_));
+    TRY_RESULT_ASSIGN(new_payload, validate_decrypt_request(req->url_, content_type, std::move(req->payload_), &model,
+                                                            nullptr, worker_private_key_, &client_public_key_));
     if (model != model_base_name_) {
       return td::Status::Error(ton::ErrorCode::protoviolation, "model name mismatch");
     }
-    req->payload_ = std::move(new_payload);
     postprocessor_ = std::make_unique<AnswerPostprocessor>(
         coefficient_, runner_config_->root_contract_config->prompt_tokens_price_multiplier(),
         runner_config_->root_contract_config->cached_tokens_price_multiplier(),
