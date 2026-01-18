@@ -136,7 +136,6 @@ create_secure_directories() {
 
 prepare_spec() {
   # Prepare spec from raw source
-  echo "Preparing specification..."
   if [ ! -d "$SPEC_RAW_DIR" ]; then
     echo "ERR: Raw spec directory not found: $SPEC_RAW_DIR" >&2
     exit 1
@@ -147,10 +146,7 @@ prepare_spec() {
     exit 1
   fi
 
-  echo "Specification prepared successfully"
-  echo "Spec hash: $spec_hash"
-
-  echo $spec_hash;
+  printf "%s" $spec_hash;
 }
 
 render_ton_config() {

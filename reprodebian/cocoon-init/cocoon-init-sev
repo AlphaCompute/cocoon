@@ -52,7 +52,12 @@ init_sev_pki
 init_sev_pki_vcek
 do_verification
 create_secure_directories
-prepare_spec
+
+echo "Preparing specification..."
+spec_hash=$(prepare_spec)
+echo "Specification prepared successfully"
+echo "Spec hash: $spec_hash"
+
 make_seal_keys
 render_ton_config
 generate_tee_certificate

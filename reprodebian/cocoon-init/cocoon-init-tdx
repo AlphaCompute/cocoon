@@ -80,7 +80,12 @@ echo "=== TDX Guest Initialization ==="
 init_tdx_pccs
 init_sev_pki
 create_secure_directories
+
+echo "Preparing specification..."
 spec_hash=$(prepare_spec)
+echo "Specification prepared successfully"
+echo "Spec hash: $spec_hash"
+
 make_seal_keys
 # Add spec hash to attestation log and extend RTMR3
 attest_log "cocoon:spec.tree=$spec_hash"
