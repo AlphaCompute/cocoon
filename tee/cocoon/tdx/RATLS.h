@@ -10,6 +10,8 @@
 
 namespace tdx {
 
+class TdxAttestationData;
+
 /**
  * @brief Custom OID constants for TDX extensions
  *
@@ -63,6 +65,7 @@ struct RATLSAttestationReport {
 
 td::StringBuilder &operator<<(td::StringBuilder &sb, const RATLSAttestationReport &report);
 
+RATLSAttestationReport make_report(const TdxAttestationData &attestation, const td::UInt384& root_key_id);
 td::UInt256 image_hash(const RATLSAttestationReport &report);
 
 struct RATLSExtensions {

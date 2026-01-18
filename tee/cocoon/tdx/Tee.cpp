@@ -55,16 +55,7 @@ class TdxTee : public cocoon::TeeInterface {
     TRY_RESULT(tdx_raw_report, tdx_make_report(user_claims));
     TRY_RESULT(attestation, tdx_parse_report(tdx_raw_report));
 
-    // XXX code duplication
-    RATLSAttestationReport report;
-    report.mr_td = attestation.mr_td;
-    report.mr_config_id = attestation.mr_config_id;
-    report.mr_owner = attestation.mr_owner;
-    report.mr_owner_config = attestation.mr_owner_config;
-    report.rtmr = attestation.rtmr;
-    report.reportdata = attestation.reportdata;
-
-    return report;
+    return tdx::make_report(attestation, td::UInt384::zero());
   }
 
  private:

@@ -23,6 +23,19 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const RATLSAttestationRepor
   return sb;
 }
 
+RATLSAttestationReport make_report(const TdxAttestationData &attestation, const td::UInt384 &root_key_id) {
+  RATLSAttestationReport report;
+  report.mr_td = attestation.mr_td;
+  report.mr_config_id = attestation.mr_config_id;
+  report.mr_owner = attestation.mr_owner;
+  report.mr_owner_config = attestation.mr_owner_config;
+  report.rtmr = attestation.rtmr;
+  report.reportdata = attestation.reportdata;
+  report.collateral_root_hash = root_key_id;
+
+  return report;
+}
+
 td::UInt256 image_hash(const RATLSAttestationReport &report) {
   TdxAttestationData attestation_data;
 
@@ -60,17 +73,7 @@ td::Result<RATLSAttestationReport> RATLSVerifier::verify(const td::UInt512 &user
   TRY_RESULT(R, tdx_validate_quote(quote));
   const auto &[attestation, root_key_id] = R;
 
-  // XXX code duplication
-  RATLSAttestationReport report;
-  report.mr_td = attestation.mr_td;
-  report.mr_config_id = attestation.mr_config_id;
-  report.mr_owner = attestation.mr_owner;
-  report.mr_owner_config = attestation.mr_owner_config;
-  report.rtmr = attestation.rtmr;
-  report.reportdata = attestation.reportdata;
-  report.collateral_root_hash = root_key_id;
-
-  return report;
+  return make_report(attestation, root_key_id);
 #endif
 
   return td::Status::Error("TDX is not supported on this platform");
