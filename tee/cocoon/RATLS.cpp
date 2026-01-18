@@ -75,7 +75,7 @@ class DefaultPolicy : public RATLSPolicy {
                                         << td::hex_encode(report.collateral_root_hash.as_slice()));
     }
 
-    return td::Status::OK();
+    return report;
   }
 
   td::Result<RATLSAttestationReport> validate(const tde2e_core::PublicKey &public_key,
