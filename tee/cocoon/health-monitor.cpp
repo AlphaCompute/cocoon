@@ -50,12 +50,14 @@ const std::vector<std::string> ALLOWED_SERVICES = {"cocoon-router.service",
                                                    "cocoon-sglang.service",
                                                    "cocoon-cert-refresh.service",
                                                    "cocoon-cert-refresh.timer",
+                                                   "cocoon-sev-pki-update.service",
+                                                   "cocoon-sev-pki-update.timer",
                                                    "spec.service"};
 
 const std::vector<std::string> CRITICAL_BASELINE_SERVICES = {"cocoon-ready.target", "cocoon-health.service"};
 const std::vector<std::string> NON_CRITICAL_BASELINE_SERVICES = {
     "docker.service", "ssh.service", "nvidia-tdx.service", "cocoon-cert-refresh.service", "cocoon-cert-refresh.timer",
-    "spec.service"};
+    "cocoon-sev-pki-update.service", "cocoon-sev-pki-update.timer", "spec.service"};
 
 std::vector<std::string> MONITORED_SERVICES;
 

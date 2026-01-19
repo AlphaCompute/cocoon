@@ -37,7 +37,7 @@ for binary in cocoon-init{,-tdx,-sev,-common} cocoon-prepare-spec cocoon-render-
 done
 
 mkdir -p "$DESTDIR/lib/systemd/system"
-for service in cocoon-init.service cocoon-ready.target mnt-spec.mount spec.service cocoon-cert-refresh.service cocoon-cert-refresh.timer cocoon-health.service; do
+for service in cocoon-init.service cocoon-ready.target mnt-spec.mount spec.service cocoon-cert-refresh.service cocoon-cert-refresh.timer cocoon-health.service cocoon-sev-pki-update.{service,timer}; do
   cp "$SRCDIR/cocoon-init/$service" "$DESTDIR/lib/systemd/system/$service"
 done
 
