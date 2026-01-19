@@ -40,7 +40,6 @@ namespace cocoon {
 const std::vector<std::string> ALLOWED_SERVICES = {"cocoon-router.service",
                                                    "cocoon-proxy-runner.service",
                                                    "cocoon-worker-runner.service",
-                                                   "cocoon-cert-refresh.service",
                                                    "cocoon-vllm.service",
                                                    "cocoon-health.service",
                                                    "cocoon-ready.target",
