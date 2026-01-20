@@ -54,7 +54,8 @@ td::Status parse_list_of_hex(td::Slice list, std::vector<T> &hashes) {
 }
 
 // Create policies from configuration
-std::map<std::string, cocoon::RATLSPolicyRef, std::less<>> create_policies_from_config(const ProxyConfig &config) {
+std::map<std::string, cocoon::RATLSPolicyRef, std::less<>> create_policies_from_config(td::actor::Scheduler *scheduler,
+                                                                                       const ProxyConfig &config) {
   std::map<std::string, cocoon::RATLSPolicyRef, std::less<>> policies;
 
   // Create shared attestation cache for all TDX policies
@@ -71,9 +72,9 @@ std::map<std::string, cocoon::RATLSPolicyRef, std::less<>> create_policies_from_
     // Create appropriate TEE interface based on type
     if (policy_config.type == "any") {
     } else if (policy_config.type == "fake_tee") {
-      ratls = cocoon::RATLSInterface::make(true, config).move_as_ok();
+      ratls = cocoon::RATLSInterface::make(scheduler, true, config).move_as_ok();
     } else if (policy_config.type == "tee") {
-      ratls = cocoon::RATLSInterface::add_cache(cocoon::RATLSInterface::make(false, config).move_as_ok(),
+      ratls = cocoon::RATLSInterface::add_cache(cocoon::RATLSInterface::make(scheduler, false, config).move_as_ok(),
                                                 std::move(attestation_cache))
                   .move_as_ok();
     } else {
@@ -508,8 +509,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Start scheduler
+  td::actor::Scheduler sched{{config.threads}};
+
   // Create policies
-  auto policies = create_policies_from_config(config);
+  auto policies = create_policies_from_config(&sched, config);
 
   // Load certificate
   cocoon::TeeCertAndKey cert_and_key;
@@ -526,9 +530,6 @@ int main(int argc, char **argv) {
   }
 
   td::SharedValue<cocoon::TeeCertAndKey> shared_cert(std::move(cert_and_key));
-
-  // Start scheduler
-  td::actor::Scheduler sched{{config.threads}};
 
   sched.run_in_context([&] {
     // Start certificate manager if cert path is provided

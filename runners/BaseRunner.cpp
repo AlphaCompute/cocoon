@@ -384,7 +384,7 @@ void BaseRunner::initialize_rpc_server(td::Promise<td::Unit> promise) {
     };
     TRY_RESULT_PROMISE(promise, tee_interface, make_tee(fake_tee_));
     TRY_RESULT_PROMISE(promise, cert_and_key, generate_cert_and_key(tee_interface.get()));
-    TRY_RESULT_PROMISE(promise, ratls_interface, RATLSInterface::make(fake_tee_, ratls_config_));
+    TRY_RESULT_PROMISE(promise, ratls_interface, RATLSInterface::make(scheduler_, fake_tee_, ratls_config_));
 
     td::actor::send_closure(
         client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_proxy(),

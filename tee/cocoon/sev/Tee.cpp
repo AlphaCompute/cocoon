@@ -295,7 +295,7 @@ td::Result<cocoon::TeeInterfaceRef> make_tee(bool fake, const TeeConfig &config)
     return std::make_shared<FakeSevTee>(std::move(vcek));
   }
 
-  TRY_RESULT(trust_chain_manager, TrustChainManager::make(config.PKI_ROOT_DIR));
+  TRY_RESULT(trust_chain_manager, TrustChainManager::make(nullptr, config.PKI_ROOT_DIR));
   TRY_RESULT(vcek_path, make_vcek_path(config.PKI_ROOT_DIR));
   TRY_RESULT(vcek_bytes, td::read_file_str(vcek_path));
   TRY_RESULT(vcek_cert, VCEKCertificate::create(vcek_bytes));

@@ -33,8 +33,8 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const RATLSAttestationRepor
   return sb;
 }
 
-td::Result<RATLSVerifier> RATLSVerifier::make(const Config &config) {
-  TRY_RESULT(trust_chain_manager, TrustChainManager::make(config.PKI_ROOT_DIR));
+td::Result<RATLSVerifier> RATLSVerifier::make(td::actor::Scheduler *scheduler, const Config &config) {
+  TRY_RESULT(trust_chain_manager, TrustChainManager::make(scheduler, config.PKI_ROOT_DIR));
 
   return RATLSVerifier(std::move(trust_chain_manager));
 }

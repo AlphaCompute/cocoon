@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 
+#include "td/actor/common.h"
 #include "td/net/utils.h"
 #include "td/utils/StringBuilder.h"
 #include "td/utils/UInt.h"
@@ -61,7 +62,7 @@ class RATLSVerifier {
   };
 
  public:
-  static td::Result<RATLSVerifier> make(const Config &config);
+  static td::Result<RATLSVerifier> make(td::actor::Scheduler *scheduler, const Config &config);
 
  public:
   explicit RATLSVerifier(TrustChainManager trust_chain_manager) : trust_chain_manager_(std::move(trust_chain_manager)) {

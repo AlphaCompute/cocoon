@@ -562,13 +562,13 @@ td::Slice RATLSAttestationReport::as_slice() const {
   UNREACHABLE();
 }
 
-td::Result<RATLSInterfaceRef> RATLSInterface::make(bool fake, const Config &config) {
+td::Result<RATLSInterfaceRef> RATLSInterface::make(td::actor::Scheduler *scheduler, bool fake, const Config &config) {
   if (fake) {
     return std::make_shared<FakeRATLSInterface>();
   }
 
   TRY_RESULT(tdx_verifier, tdx::RATLSVerifier::make(config.tdx_config));
-  TRY_RESULT(sev_verifier, sev::RATLSVerifier::make(config.sev_config));
+  TRY_RESULT(sev_verifier, sev::RATLSVerifier::make(scheduler, config.sev_config));
 
   return std::make_shared<RealRATLSInterface>(std::move(tdx_verifier), std::move(sev_verifier));
 }

@@ -7,6 +7,7 @@
 #include <openssl/x509.h>
 
 #include "td/actor/actor.h"
+#include "td/actor/common.h"
 #include "td/actor/coro_task.h"
 #include "td/e2e/Keys.h"
 #include "td/utils/JsonBuilder.h"
@@ -205,7 +206,8 @@ class RATLSInterface {
   };
 
  public:
-  static td::Result<RATLSInterfaceRef> make(bool fake = false, const Config& config = {});
+  static td::Result<RATLSInterfaceRef> make(td::actor::Scheduler* scheduler = nullptr, bool fake = false,
+                                            const Config& config = {});
   static td::Result<RATLSInterfaceRef> add_cache(RATLSInterfaceRef ratls,
                                                  std::shared_ptr<cocoon::AttestationCache> cache);
 

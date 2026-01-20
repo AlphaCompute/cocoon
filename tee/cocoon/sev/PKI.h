@@ -12,6 +12,7 @@
 #include <openssl/ecdsa.h>
 
 #include "td/actor/actor.h"
+#include "td/actor/common.h"
 #include "td/utils/SharedValue.h"
 #include "td/utils/Slice-decl.h"
 #include "td/utils/Status.h"
@@ -147,7 +148,7 @@ class TrustChain {
 
 class TrustChainManager {
  public:
-  static td::Result<TrustChainManager> make(td::Slice PKI_ROOT_DIR);
+  static td::Result<TrustChainManager> make(td::actor::Scheduler *scheduler, td::Slice PKI_ROOT_DIR);
 
  public:
   TrustChainManager() = default;

@@ -14,6 +14,7 @@
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 
+#include "td/actor/core/SchedulerContext.h"
 #include "td/utils/filesystem.h"
 #include "td/utils/format.h"
 #include "td/utils/misc.h"
@@ -494,17 +495,21 @@ td::Status TrustChain::verify_cert(X509* x509) const {
   return td::Status::OK();
 }
 
-td::Result<TrustChainManager> TrustChainManager::make(td::Slice PKI_ROOT_DIR) {
+td::Result<TrustChainManager> TrustChainManager::make(td::actor::Scheduler* scheduler, td::Slice PKI_ROOT_DIR) {
   TRY_RESULT(trust_chains, load_trust_chains(PKI_ROOT_DIR));
 
   td::SharedValue<std::shared_ptr<std::unordered_map<ProductName, TrustChain>>> shared_trust_chains(
       std::move(trust_chains));
 
-#if 0
-  td::actor::create_actor<TrustChainUpdater>(
-      "TrustChainUpdater", TrustChainUpdater::Config(PKI_ROOT_DIR.str(), std::move(shared_trust_chains)))
-      .release();
-#endif
+  if (scheduler) {
+    LOG(INFO) << "Starting AMD SEV TrustChainUpdater";
+
+    scheduler->run_in_context([&] {
+      td::actor::create_actor<TrustChainUpdater>(
+          "TrustChainUpdater", TrustChainUpdater::Config(PKI_ROOT_DIR.str(), std::move(shared_trust_chains)))
+          .release();
+    });
+  }
 
   return TrustChainManager(shared_trust_chains);
 }
@@ -538,8 +543,7 @@ void TrustChainUpdater::reload() {
     return;
   }
 
-  // TODO
-  // config_.trust_chains.set_value(maybe_trust_chains.move_as_ok());
+  config_.trust_chains.set_value(maybe_trust_chains.move_as_ok());
   LOG(INFO) << "AMD SEV TrustChains reloaded";
 }
 
