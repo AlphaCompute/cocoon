@@ -23,6 +23,15 @@
 
 namespace cocoon {
 
+namespace {
+
+std::string read_image_hash() {
+  auto r = metrics::read_proc_file("/etc/tee/tee_image_hash.b64", 4096);
+  return r.is_ok() ? r.move_as_ok() : "(not available)";
+}
+
+}  // namespace
+
 // ============================================================================
 // Formatters
 // ============================================================================
@@ -123,11 +132,6 @@ static int parse_float_as_int(const std::string& s) {
 // ============================================================================
 
 namespace render_tdx {
-
-std::string read_image_hash() {
-  auto r = metrics::read_proc_file("/etc/tee/tee_image_hash.b64", 4096);
-  return r.is_ok() ? r.move_as_ok() : "(not available)";
-}
 
 std::string read_rtmr(int index) {
   if (index < 0 || index > 3) {
@@ -344,7 +348,7 @@ std::string get_status() {
     out << "Error opening SEV GuestDevice: " << (PSTRING() << maybe_guest_device.error()) << "\n";
   } else {
     auto guest_device = maybe_guest_device.move_as_ok();
-    auto maybe_report = guest_device.get_report();
+    auto maybe_report = guest_device.get_report(td::UInt512::zero());
     if (maybe_report.is_error()) {
       out << "Error getting SEV report: " << (PSTRING() << maybe_report.error()) << "\n";
     } else {
@@ -356,7 +360,7 @@ std::string get_status() {
 
       if (image_hash == calculated) {
         out << "  Image hash: + VERIFIED\n";
-      } else if () {
+      } else {
         out << "  Image hash: - MISMATCH (stored != calculated) (" << image_hash << " != " << calculated << ")\n";
       }
     }
@@ -528,7 +532,7 @@ static std::string render_header(const std::vector<ServiceState>& states, const 
     }
   }
 
-  out << "TDX Image Hash: " << render_tdx::read_image_hash() << "\n";
+  out << "TDX Image Hash: " << read_image_hash() << "\n";
   out << "System: Load " << std::fixed << std::setprecision(2) << sys_m.load_1m;
 
   if (sys_m.mem_total > 0 && sys_m.mem_available > 0) {
