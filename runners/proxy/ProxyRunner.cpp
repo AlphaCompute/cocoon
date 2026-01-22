@@ -1047,7 +1047,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto obj = fetch_tl_object<cocoon_api::proxy_queryAnswerPart>(std::move(query), true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_queryAnswerPart>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from worker: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       auto it = running_queries_.find(obj->request_id_);
       if (it != running_queries_.end()) {
         td::actor::send_closure(it->second, &ProxyRunningRequest::receive_answer_part, std::move(obj));
@@ -1064,7 +1069,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto obj = fetch_tl_object<cocoon_api::proxy_queryAnswerPartError>(std::move(query), true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_queryAnswerPartError>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from worker: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       auto it = running_queries_.find(obj->request_id_);
       if (it != running_queries_.end()) {
         td::actor::send_closure(it->second, &ProxyRunningRequest::receive_answer_part_error, std::move(obj));
@@ -1081,7 +1091,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto obj = fetch_tl_object<cocoon_api::proxy_queryAnswer>(std::move(query), true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_queryAnswer>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from worker: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       auto it = running_queries_.find(obj->request_id_);
       if (it != running_queries_.end()) {
         td::actor::send_closure(it->second, &ProxyRunningRequest::receive_answer, std::move(obj));
@@ -1098,7 +1113,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto obj = fetch_tl_object<cocoon_api::proxy_queryAnswerError>(std::move(query), true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_queryAnswerError>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from worker: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       auto it = running_queries_.find(obj->request_id_);
       if (it != running_queries_.end()) {
         td::actor::send_closure(it->second, &ProxyRunningRequest::receive_answer_error, std::move(obj));
@@ -1117,7 +1137,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto obj = fetch_tl_object<cocoon_api::proxy_QueryAnswerEx>(std::move(query), true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_QueryAnswerEx>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from worker: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       td::Bits256 request_id;
       cocoon_api::downcast_call(*obj, [&](auto &e) { request_id = e.request_id_; });
 
@@ -1137,13 +1162,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto R_obj = fetch_tl_object<cocoon_api::client_runQuery>(std::move(query), true);
-      if (R_obj.is_error()) {
-        LOG(ERROR) << "received incorrect object: " << R_obj.move_as_error();
+      auto R = fetch_tl_object<cocoon_api::client_runQuery>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from client: " << R.move_as_error();
         return;
       }
-
-      auto obj = R_obj.move_as_ok();
+      auto obj = R.move_as_ok();
 
       auto ex_obj = ton::create_tl_object<cocoon_api::client_runQueryEx>(
           std::move(obj->model_name_), std::move(obj->query_), obj->max_coefficient_, obj->max_tokens_, obj->timeout_,
@@ -1159,13 +1183,13 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto R_obj = fetch_tl_object<cocoon_api::client_runQueryEx>(std::move(query), true);
-      if (R_obj.is_error()) {
-        LOG(ERROR) << "received incorrect object: " << R_obj.move_as_error();
+      auto R = fetch_tl_object<cocoon_api::client_runQueryEx>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from client: " << R.move_as_error();
         return;
       }
+      auto obj = R.move_as_ok();
 
-      auto obj = R_obj.move_as_ok();
       forward_query(connection_id, std::move(obj));
       return;
     };
@@ -1177,7 +1201,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto obj = fetch_tl_object<cocoon_api::worker_enabledDisabled>(std::move(query), true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::worker_enabledDisabled>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from worker: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       static_cast<ProxyInboundWorkerConnection *>(conn)->worker_connection_info()->is_disabled = obj->disabled_;
       return;
     };
@@ -1189,7 +1218,12 @@ void ProxyRunner::receive_message(TcpClient::ConnectionId connection_id, td::Buf
         return;
       }
 
-      auto obj = fetch_tl_object<cocoon_api::worker_newCoefficient>(std::move(query), true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::worker_newCoefficient>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from worker: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       if (obj->new_coefficient_ < 0) {
         fail_connection(connection_id, td::Status::Error(ton::ErrorCode::protoviolation, "bad coefficient value"));
         return;
@@ -1501,7 +1535,7 @@ void ProxyRunner::forward_query(TcpClient::ConnectionId client_connection_id,
   worker_connection->info->forwarded_query();
 
   auto worker_tcp_connection =
-      static_cast<ProxyInboundClientConnection *>(get_connection(worker_connection->connection_id));
+      static_cast<ProxyInboundWorkerConnection *>(get_connection(worker_connection->connection_id));
 
   if (!client_tcp_connection || !worker_tcp_connection) {
     return fail(td::Status::Error(ton::ErrorCode::error, PSTRING() << "connection is dead"));

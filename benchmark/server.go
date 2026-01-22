@@ -12,8 +12,10 @@ func stream(w http.ResponseWriter, r *http.Request) {
   defer r.Body.Close()
   body, _ := io.ReadAll(r.Body)
   bodyString := string(body)
-	
-  fmt.Println("body=", bodyString)
+
+  if false {
+    fmt.Println("body=", bodyString)
+  }
 
 	q := r.URL.Query()
 	chunks, _ := strconv.Atoi(q.Get("chunks"))

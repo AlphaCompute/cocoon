@@ -101,9 +101,14 @@ void ClientRunningRequest::process_answer_ex_impl(cocoon_api::client_queryAnswer
 
   LOG(DEBUG) << "client request " << request_id_.to_hex() << ": received answer";
 
-  received_answer_at_unix_ = td::Clocks::system();
+  auto R = fetch_tl_object<cocoon_api::http_response>(std::move(ans.answer_), true);
+  if (R.is_error()) {
+    LOG(ERROR) << "client request " << request_id_.to_hex() << ": received malformed answer: " << R.move_as_error();
+    return;
+  }
+  auto response = R.move_as_ok();
 
-  auto response = fetch_tl_object<cocoon_api::http_response>(std::move(ans.answer_), true).move_as_ok();
+  received_answer_at_unix_ = td::Clocks::system();
 
   stats()->answer_bytes_sent += (double)response->payload_.size();
 

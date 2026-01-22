@@ -29,7 +29,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #define HAS_UNISTD 1
-#elif
+#else
 #define HAS_UNISTD 0
 #endif
 
@@ -334,7 +334,12 @@ void WorkerRunner::receive_message(TcpClient::ConnectionId connection_id, td::Bu
     } break;
     case cocoon_api::proxy_runQuery::ID: {
       proxy->received_request_from_proxy();
-      auto obj = fetch_tl_object<cocoon_api::proxy_runQuery>(query, true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_runQuery>(query, true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from proxy: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       auto ex_obj = ton::create_tl_object<cocoon_api::proxy_runQueryEx>(
           std::move(obj->query_), std::move(obj->signed_payment_), obj->coefficient_, obj->timeout_, obj->request_id_,
           0, false, td::Bits256::zero());
@@ -342,11 +347,21 @@ void WorkerRunner::receive_message(TcpClient::ConnectionId connection_id, td::Bu
     } break;
     case cocoon_api::proxy_runQueryEx::ID: {
       proxy->received_request_from_proxy();
-      auto obj = fetch_tl_object<cocoon_api::proxy_runQueryEx>(query, true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_runQueryEx>(query, true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from proxy: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       receive_request(*proxy, connection_id, *obj);
     } break;
     case cocoon_api::proxy_workerRequestPayment::ID: {
-      auto obj = fetch_tl_object<cocoon_api::proxy_workerRequestPayment>(query, true).move_as_ok();
+      auto R = fetch_tl_object<cocoon_api::proxy_workerRequestPayment>(query, true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from proxy: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       /* we already have newer information. This shouldn't happen, so close we close the connection
        * in order to restart a handshake to compare information*/
       if (!proxy->update_payment_info(std::move(obj->signed_payment_))) {

@@ -55,7 +55,13 @@ void ProxyRunningRequest::receive_answer_ex_impl(cocoon_api::proxy_queryAnswerEx
 
   received_answer_time_unix_ = td::Clocks::system();
 
-  auto http_ans = cocoon::fetch_tl_object<cocoon_api::http_response>(ans.answer_.as_slice(), true).move_as_ok();
+  auto R = cocoon::fetch_tl_object<cocoon_api::http_response>(ans.answer_.as_slice(), true);
+  if (R.is_error()) {
+    fail(td::Status::Error(ton::ErrorCode::protoviolation,
+                           PSTRING() << "received malformed answer from worker: " << R.move_as_error()));
+    return;
+  }
+  auto http_ans = R.move_as_ok();
   if (http_ans->payload_.size() > 0) {
     stats()->answer_bytes_sent += (double)http_ans->payload_.size();
     payload_parts_++;

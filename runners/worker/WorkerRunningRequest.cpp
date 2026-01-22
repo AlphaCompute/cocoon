@@ -128,7 +128,6 @@ void WorkerRunningRequest::start_request() {
       TRY_STATUS(h.basic_check());
       request->add_header(std::move(h));
     }
-    request->add_header(ton::http::HttpHeader{"Content-Length", PSTRING() << req->payload_.size()});
     TRY_STATUS(request->complete_parse_header());
     return td::Status::OK();
   }();

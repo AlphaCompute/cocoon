@@ -495,7 +495,14 @@ std::string KeyManagerRunner::http_remove_key(std::string pub_key) {
 }
 
 std::string KeyManagerRunner::http_generate_key(std::string key_type) {
-  generate_key(1);
+  if (key_type == "") {
+    key_type = "1";
+  }
+  auto R = td::to_integer_safe<td::uint8>(key_type);
+  if (R.is_error()) {
+    return wrap_short_answer_to_http(PSTRING() << "failed to parse integer: " << key_type);
+  }
+  generate_key(R.move_as_ok());
   kv_->flush().ensure();
   return wrap_short_answer_to_http(PSTRING() << "key generated");
 }

@@ -75,7 +75,12 @@ void ClientRunner::run_get_models_request(std::unique_ptr<http::HttpRequestCallb
         }
 
         auto b = R.move_as_ok();
-        auto obj = cocoon::fetch_tl_object<cocoon_api::client_workerTypesV2>(std::move(b), true).move_as_ok();
+        auto R2 = cocoon::fetch_tl_object<cocoon_api::client_workerTypesV2>(std::move(b), true);
+        if (R2.is_error()) {
+          return http_send_static_answer(R2.move_as_error_prefix("got invalid result from proxy: "),
+                                         std::move(answer_callback));
+        }
+        auto obj = R2.move_as_ok();
         SimpleJsonSerializer jb;
         jb.start_object();
         jb.add_element("object", "list");
@@ -291,7 +296,12 @@ void ClientRunner::receive_message(TcpClient::ConnectionId connection_id, td::Bu
     case cocoon_api::client_queryAnswerEx::ID:
     case cocoon_api::client_queryAnswerPartEx::ID:
     case cocoon_api::client_queryAnswerErrorEx::ID: {
-      auto obj = cocoon::fetch_tl_object<cocoon_api::client_QueryAnswerEx>(std::move(query), true).move_as_ok();
+      auto R = cocoon::fetch_tl_object<cocoon_api::client_QueryAnswerEx>(std::move(query), true);
+      if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from proxy: " << R.move_as_error();
+        return;
+      }
+      auto obj = R.move_as_ok();
       td::Bits256 request_id;
       cocoon_api::downcast_call(*obj, [&](auto &e) { request_id = e.request_id_; });
       auto it = running_queries_.find(request_id);
@@ -303,6 +313,7 @@ void ClientRunner::receive_message(TcpClient::ConnectionId connection_id, td::Bu
     case cocoon_api::proxy_signedPayment::ID: {
       auto R = cocoon::fetch_tl_object<cocoon_api::proxy_signedPayment>(std::move(query), true);
       if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from proxy: " << R.move_as_error();
         return;
       }
       auto conn = static_cast<ClientProxyConnection *>(get_connection(connection_id));
@@ -315,6 +326,7 @@ void ClientRunner::receive_message(TcpClient::ConnectionId connection_id, td::Bu
     case cocoon_api::proxy_clientRequestPayment::ID: {
       auto R = cocoon::fetch_tl_object<cocoon_api::proxy_clientRequestPayment>(std::move(query), true);
       if (R.is_error()) {
+        LOG(ERROR) << "received malformed message from proxy: " << R.move_as_error();
         return;
       }
       auto obj = R.move_as_ok();
