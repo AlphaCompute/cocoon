@@ -119,7 +119,7 @@ td::Status parse_image_hashes(td::Slice spec, ImageHashes &image_hashes) {
     }
 
     auto [type, h] = td::split(hash_str, '@');
-    TRY_RESULT(hash, parse_hex<td::UInt256>(hash_str));
+    TRY_RESULT(hash, parse_hex<td::UInt256>(h));
 
     if (type == "tdx") {
       image_hashes.tdx.push_back(hash);
