@@ -60,7 +60,8 @@ sev_kds_download() {
         fi
 
         if ! echo "${hdrs}" | head -n 1 | grep -q 'HTTP/1.1 429'; then
-            return 1
+            echo "ERR: AMD KDS rate limited us" >&2
+            exit 1
         fi
 
         sleep ${retry_after}
