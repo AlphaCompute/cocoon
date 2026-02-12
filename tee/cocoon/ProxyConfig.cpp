@@ -232,7 +232,7 @@ std::string generate_example_config() {
            ]
         },
         "sev_config": {
-          "allowed_measurement":" [
+          "allowed_measurement": [
             "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
             "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
           ],
