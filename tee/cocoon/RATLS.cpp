@@ -43,7 +43,7 @@ class DefaultPolicy : public RATLSPolicy {
         return td::Status::Error("Image hash verification required but policy has no RATLS interface");
       }
 
-      return RATLSAttestationReport{};
+      return tdx::RATLSAttestationReport{};
     }
 
     const auto reportdata = hash_public_key(public_key);
@@ -85,7 +85,7 @@ class DefaultPolicy : public RATLSPolicy {
         return td::Status::Error("Image hash verification required but policy has no RATLS interface");
       }
 
-      return RATLSAttestationReport{};
+      return sev::RATLSAttestationReport{};
     }
 
     const auto reportdata = hash_public_key(public_key);
