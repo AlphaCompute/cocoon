@@ -190,13 +190,16 @@ struct FakeTdxInterface : public TdxInterface {
   td::Result<AttestationData> get_data(const Quote &quote) const override {
     TdxAttestationData data{};
 
-    if (quote.raw_quote.size() != data.reportdata.as_mutable_slice().size()) {
-      return td::Status::Error(PSLICE() << "Invalid fake quote size: expected "
-                                        << data.reportdata.as_mutable_slice().size() << " bytes, got "
+    auto expected = data.reportdata.as_mutable_slice().size();
+    if (quote.raw_quote.size() == expected) {
+      data.reportdata.as_mutable_slice().copy_from(quote.raw_quote);
+    } else if (quote.raw_quote.size() > expected) {
+      data.reportdata.as_mutable_slice().copy_from(td::Slice(quote.raw_quote).substr(0, expected));
+    } else {
+      return td::Status::Error(PSLICE() << "Invalid quote size: expected at least "
+                                        << expected << " bytes, got "
                                         << quote.raw_quote.size());
     }
-
-    data.reportdata.as_mutable_slice().copy_from(quote.raw_quote);
     return data;
   }
 
