@@ -35,6 +35,9 @@
 #include "TonlibWrapper.h"
 #include "helpers/Ton.h"
 #include "helpers/SimpleJsonSerializer.hpp"
+#include "tee/cocoon/RATLS.h"
+#include "tee/cocoon/sev/Tee.h"
+#include "tee/cocoon/tdx/Tee.h"
 
 #include <algorithm>
 #include <csignal>
@@ -444,8 +447,8 @@ class BaseRunner : public td::actor::Actor {
   td::Status check_verification_key(const RemoteAppType &app_type, const td::Bits256 &verified_by);
 
   /* Setters */
-  void set_fake_tdx(bool value) {
-    fake_tdx_ = value;
+  void set_fake_tee(bool value) {
+    fake_tee_ = value;
   }
   void set_http_port(td::uint16 port) {
     http_port_ = port;
@@ -822,7 +825,10 @@ class BaseRunner : public td::actor::Actor {
   bool is_test_{false};
   bool is_testnet_{true};
   bool ton_disabled_{false};
-  bool fake_tdx_{false};
+  bool fake_tee_{false};
+  tdx::TeeConfig tdx_tee_config_{};
+  sev::TeeConfig sev_tee_config_{};
+  RATLSInterface::Config ratls_config_{};
   std::string ton_pseudo_config_;
   std::string http_access_hash_;
 

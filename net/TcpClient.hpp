@@ -20,7 +20,8 @@
 
 #include "TcpConnection.hpp"
 #include "TcpClient.h"
-#include "cocoon/tdx.h"
+#include "tee/cocoon/Tee.h"
+#include "tee/cocoon/RATLS.h"
 #include "common/bitstring.h"
 #include "td/actor/ActorId.h"
 #include "td/actor/ActorOwn.h"
@@ -52,7 +53,7 @@ struct TcpConnectRuleVia {
 };
 
 struct TcpConnectRuleTls {
-  std::shared_ptr<tdx::CertAndKey> cert_and_key;
+  std::shared_ptr<TeeCertAndKey> cert_and_key;
 };
 
 struct TcpConnectRule {

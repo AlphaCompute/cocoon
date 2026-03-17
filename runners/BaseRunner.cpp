@@ -3,7 +3,8 @@
 #include "auto/tl/tonlib_api.h"
 #include "auto/tl/tonlib_api.hpp"
 #include "block.h"
-#include "cocoon/tdx.h"
+#include "tee/cocoon/RATLS.h"
+#include "tee/cocoon/Tee.h"
 #include "common/bitstring.h"
 #include "boost-http/http.h"
 #include "net/TcpClient.h"
@@ -367,15 +368,30 @@ void BaseRunner::initialize_rpc_server(td::Promise<td::Unit> promise) {
     td::actor::send_closure(client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_key_manager(),
                             std::make_shared<TcpConnectionType>(TcpConnectionSocks5(connection_to_proxy_via_)));
   } else {
-    LOG(INFO) << "using " << (fake_tdx_ ? "fake" : "real") << " tdx-tls connection";
-    auto cert_and_key = tdx::generate_cert_and_key(nullptr);
-    auto tdx_interface = fake_tdx_ ? tdx::TdxInterface::create_fake() : tdx::TdxInterface::create();
-    tdx::PolicyConfig conf{};  // allow all
-    auto policy = tdx::Policy::make(tdx_interface, conf);
-    td::actor::send_closure(client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_proxy(),
-                            std::make_shared<TcpConnectionType>(TcpConnectionTls(cert_and_key, policy)));
-    td::actor::send_closure(client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_key_manager(),
-                            std::make_shared<TcpConnectionType>(TcpConnectionTls(cert_and_key, policy)));
+    LOG(INFO) << "using " << (fake_tee_ ? "fake" : "real") << " tdx-tls connection";
+
+    auto make_tee = [&](bool fake) -> td::Result<TeeInterfaceRef> {
+      TRY_RESULT(tee_type, TeeInterface::this_cpu_tee_type());
+
+      switch (tee_type) {
+        case TeeType::Sev:
+          return sev::make_tee(fake, sev_tee_config_);
+        case TeeType::Tdx:
+          return tdx::make_tee(fake, tdx_tee_config_);
+      }
+
+      UNREACHABLE();
+    };
+    TRY_RESULT_PROMISE(promise, tee_interface, make_tee(fake_tee_));
+    TRY_RESULT_PROMISE(promise, cert_and_key, generate_cert_and_key(tee_interface.get()));
+    TRY_RESULT_PROMISE(promise, ratls_interface, RATLSInterface::make(scheduler_, fake_tee_, ratls_config_));
+
+    td::actor::send_closure(
+        client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_proxy(),
+        std::make_shared<TcpConnectionType>(TcpConnectionTls(cert_and_key, RATLSPolicy::make(ratls_interface))));
+    td::actor::send_closure(
+        client_, &TcpClient::add_connection_to_remote_app_type_rule, remote_app_type_key_manager(),
+        std::make_shared<TcpConnectionType>(TcpConnectionTls(cert_and_key, RATLSPolicy::make(ratls_interface))));
   }
   promise.set_value(td::Unit());
 }

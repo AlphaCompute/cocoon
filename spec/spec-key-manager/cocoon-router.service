@@ -1,9 +1,9 @@
 [Unit]
-Description=TDX router
+Description=TEE router
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/router -R 13001:localhost:13101@tdx --serialize-info -C /etc/tdx/tdx
+ExecStart=/usr/bin/router -R 13001:localhost:13101@tee --serialize-info -C /etc/tee/tee
 StandardOutput=journal+console
 StandardError=journal+console
 

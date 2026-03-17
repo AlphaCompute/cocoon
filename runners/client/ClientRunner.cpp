@@ -154,7 +154,7 @@ void ClientRunner::load_config(td::Promise<td::Unit> promise) {
     }
 
     set_check_image_hashes(conf.check_proxy_hashes_ || !conf.is_test_);
-    set_fake_tdx(!check_image_hashes());
+    set_fake_tee(!check_image_hashes());
     set_secret_string(td::SecureString(conf.secret_string_));
     set_number_of_proxy_connections(conf.proxy_connections_, true);
     set_owner_address(owner_address);

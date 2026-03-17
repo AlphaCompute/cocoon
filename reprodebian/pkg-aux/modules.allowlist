@@ -115,6 +115,7 @@
 ./kernel/drivers/scsi/sr_mod.ko.xz
 ./kernel/drivers/virt/coco/guest/tsm_report.ko.xz
 ./kernel/drivers/virt/coco/tdx-guest/tdx-guest.ko.xz
+./kernel/drivers/virt/coco/sev-guest/sev-guest.ko.xz
 ./kernel/drivers/watchdog/iTCO_vendor_support.ko.xz
 ./kernel/drivers/watchdog/iTCO_wdt.ko.xz
 ./kernel/drivers/watchdog/watchdog.ko.xz
