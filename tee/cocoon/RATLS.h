@@ -195,7 +195,7 @@ class RATLSAttestedPeerInfo {
   RATLSPeerInfo peer_info_;
 };
 
-struct RATLSInterface;
+class RATLSInterface;
 using RATLSInterfaceRef = std::shared_ptr<const RATLSInterface>;
 
 class RATLSInterface {
@@ -222,7 +222,7 @@ class RATLSInterface {
                                                          const tdx::RATLSExtensions& extensions) const = 0;
 };
 
-struct RATLSPolicy;
+class RATLSPolicy;
 using RATLSPolicyRef = std::shared_ptr<const RATLSPolicy>;
 
 class RATLSPolicy {
@@ -265,19 +265,19 @@ class RATLSPolicyHelper : public RATLSPolicy {
 };
 
 struct RATLSVerifyCallbackBuilder {
-  static std::function<int(int, void *)> from_policy(RATLSPolicyRef policy);
+  static std::function<int(int, void*)> from_policy(RATLSPolicyRef policy);
 };
 
 struct RATLSContext {
   RATLSContext() = default;
-  RATLSContext(const RATLSContext &) = delete;
-  RATLSContext &operator=(const RATLSContext &) = delete;
-  RATLSContext(RATLSContext &&) = delete;
-  RATLSContext &operator=(RATLSContext &&) = delete;
-  std::function<int(int, void *)> custom_verify_callback{};
+  RATLSContext(const RATLSContext&) = delete;
+  RATLSContext& operator=(const RATLSContext&) = delete;
+  RATLSContext(RATLSContext&&) = delete;
+  RATLSContext& operator=(RATLSContext&&) = delete;
+  std::function<int(int, void*)> custom_verify_callback{};
 };
 
-RATLSContext *RATLS_extract_context(SSL_CTX *ssl_ctx, bool create_if_empty);
-int RATLS_verify_callback(int preverify_ok, X509_STORE_CTX *ctx);
+RATLSContext* RATLS_extract_context(SSL_CTX* ssl_ctx, bool create_if_empty);
+int RATLS_verify_callback(int preverify_ok, X509_STORE_CTX* ctx);
 
 }  // namespace cocoon

@@ -144,6 +144,7 @@ void TcpConnection::send(td::BufferSlice data) {
   auto data_size = td::narrow_cast<td::uint32>(data.size());
   if (data_size < 4 || data_size > (1 << 24)) {
     LOG(WARNING) << "tcp: bad packet size " << data_size;
+    fail(td::Status::Error(ton::ErrorCode::protoviolation, "invalid packet length"));
     return;
   }
 

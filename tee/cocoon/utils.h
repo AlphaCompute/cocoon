@@ -49,7 +49,7 @@ td::Result<TT> to(td::Slice s) {
 
 // Binary slice helpers - read and consume typed value from slice
 template <class T, class TT = T>
-td::Result<TT> cut(td::Slice& s) {
+td::Result<TT> cut(td::Slice &s) {
   if (s.size() < sizeof(T)) {
     return td::Status::Error(PSLICE() << "Insufficient data in cut(): got " << s.size() << " bytes, need at least "
                                       << sizeof(T));
@@ -131,6 +131,9 @@ td::actor::Task<std::pair<td::Pipe, RATLSAttestedPeerInfo>> wrap_tls_server(td::
                                                                             const td::IPAddress &source,
                                                                             const td::IPAddress &destination);
 
+struct ProxyState;
+td::StringBuilder &operator<<(td::StringBuilder &sb, const ProxyState &state);
+
 struct ProxyState {
   std::string state_ = "Connecting";
   td::optional<td::IPAddress> source_;
@@ -205,7 +208,5 @@ td::Result<UIntType> parse_hex_uint(td::Slice hex_str) {
   result.as_mutable_slice().copy_from(bytes);
   return result;
 }
-
-td::StringBuilder &operator<<(td::StringBuilder &sb, const ProxyState &state);
 
 }  // namespace cocoon
