@@ -559,7 +559,7 @@ def run_client_local(cfg: Config):
 
     # Start router (SOCKS5 only, no reverse proxy) with colored output
     router = f'{cfg.build_dir}/tee/router'
-    router_proc = popen([router, '-S', '8116@tdx', '--serialize-info'],
+    router_proc = popen([router, '-S', '8116@tee', '--serialize-info'],
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     router_thread = threading.Thread(target=stream_output, args=(router_proc, 'ROUTER', '36'), daemon=True)
     router_thread.start()
