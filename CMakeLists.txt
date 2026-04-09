@@ -295,6 +295,7 @@ function(add_isolated_subdir dir)
   set(CMAKE_CXX_FLAGS "")  # scoped only to this function
   add_subdirectory(${dir} EXCLUDE_FROM_ALL)
 endfunction()
+set(USE_QUIC OFF CACHE BOOL "" FORCE)
 add_isolated_subdir(ton)
 add_subdirectory(tdport)
 

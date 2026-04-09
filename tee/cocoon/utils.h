@@ -163,6 +163,9 @@ td::StringBuilder &operator<<(td::StringBuilder &sb, const AttestedPeerInfo &inf
 AttestedPeerInfo make_attested_peer_info(const tdx::AttestationData &attestation, const tdx::UserClaims &user_claims,
                                          const td::IPAddress &source, const td::IPAddress &destination);
 
+struct ProxyState;
+td::StringBuilder &operator<<(td::StringBuilder &sb, const ProxyState &state);
+
 struct ProxyState {
   std::string state_ = "Connecting";
   td::optional<td::IPAddress> source_;
@@ -224,7 +227,5 @@ struct ProxyState {
     }
   }
 };
-
-td::StringBuilder &operator<<(td::StringBuilder &sb, const ProxyState &state);
 
 }  // namespace cocoon
