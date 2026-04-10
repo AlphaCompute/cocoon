@@ -249,6 +249,7 @@ class RATLSPolicyHelper : public RATLSPolicy {
       : policy_(std::move(policy)), promise_(std::move(promise)), src_(src), dst_(dst) {
   }
 
+  td::Result<RATLSAttestationReport> validate(const tde2e_core::PublicKey& public_key) const override;
   td::Result<RATLSAttestationReport> validate(const tde2e_core::PublicKey& public_key,
                                               const tdx::RATLSExtensions& extensions) const override;
   td::Result<RATLSAttestationReport> validate(const tde2e_core::PublicKey& public_key,

@@ -602,6 +602,10 @@ RATLSPolicyRef RATLSPolicy::make(RATLSInterfaceRef ratls, RATLSPolicyConfig conf
   return std::make_shared<DefaultPolicy>(std::move(ratls), std::move(config));
 }
 
+td::Result<RATLSAttestationReport> RATLSPolicyHelper::validate(const tde2e_core::PublicKey &public_key) const {
+  return policy_->validate(public_key);
+}
+
 td::Result<RATLSAttestationReport> RATLSPolicyHelper::validate(const tde2e_core::PublicKey &public_key,
                                                                const tdx::RATLSExtensions &extensions) const {
   auto maybe_report = policy_->validate(public_key, extensions);
