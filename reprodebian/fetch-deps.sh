@@ -50,7 +50,9 @@ fi
 
 if ! [[ -f "$DIR/mkosi.sandbox/etc/apt/sources.list.d/cuda-debian13-x86_64.list" ]]; then
   mkdir -p "$DIR/mkosi.sandbox/etc/apt/sources.list.d" 2>/dev/null || true
-  ar p "mkosi.cache/cuda-keyring_1.1-1_all.deb" data.tar.xz | tar -xOJf - ./etc/apt/sources.list.d/cuda-debian13-x86_64.list > "$DIR/mkosi.sandbox/etc/apt/sources.list.d/cuda-debian13-x86_64.list"
+  # cuda-keyring_1.1-1 only ships cuda-debian12-x86_64.list; write the debian13 equivalent directly
+  echo "deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/ /" \
+    > "$DIR/mkosi.sandbox/etc/apt/sources.list.d/cuda-debian13-x86_64.list"
 fi
 
 if ! [[ -f "$DIR/mkosi.sandbox/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]]; then
