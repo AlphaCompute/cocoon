@@ -970,7 +970,7 @@ void ProxyRunner::all_to_db() {
   flush_db();
 
   if (will_send_transaction) {
-    next_db_save_to_blockchain_at_ = td::Timestamp::in(td::Random::fast(30.0, 60.0));
+    next_db_save_to_blockchain_at_ = td::Timestamp::in(td::Random::fast(420.0, 900.0));
     running_save_state_to_blockchain_ = true;
 
     auto msg = sc_->create_save_state_message(last_saved_state_seqno_, session_unique_hash_);
